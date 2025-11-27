@@ -1,0 +1,7 @@
+{
+  "name": "BARDAK - Reading Adventures",
+  "description": "A playful, gamified Hebrew learning application for children featuring a world-map progression, interactive mini-games, and vocal reinforcement using Gemini AI for content generation.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
