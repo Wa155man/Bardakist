@@ -1,0 +1,20 @@
+{
+  "name": "Zoharon - Hebrew Learning",
+  "short_name": "Zoharon",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e293b",
+  "theme_color": "#fcd34d",
+  "icons": [
+    {
+      "src": "https://image.pollinations.ai/prompt/cute%20white%20maltipoo%20puppy%20face%20icon%20cartoon%20vector?width=192&height=192&nologo=true",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://image.pollinations.ai/prompt/cute%20white%20maltipoo%20puppy%20face%20icon%20cartoon%20vector?width=512&height=512&nologo=true",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
