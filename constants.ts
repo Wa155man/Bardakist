@@ -1,4 +1,5 @@
 
+
 import { LevelNode, VowelType, HebrewLetter, GameQuestion, RhymeQuestion, GuriReward, PetProfile } from './types';
 
 export const LEVEL_NODES: LevelNode[] = [
@@ -59,6 +60,18 @@ export const LEVEL_NODES: LevelNode[] = [
   }
 ];
 
+export const GURI_REWARDS: GuriReward[] = [
+  { milestone: 100, message: "אוף, הייתי כל כך צמא! תודה על המשקה!", imagePrompt: "cute white maltipoo dog drinking water from a bowl happy cartoon style" },
+  { milestone: 200, message: "הייתי ממש רעב, תודה רבה על האוכל!", imagePrompt: "cute white maltipoo dog eating a bone happy cartoon style" },
+  { milestone: 300, message: "וואי אני עייף... אני הולך לישון עד ה-100 הבא.", imagePrompt: "cute white maltipoo dog sleeping in a bed cozy cartoon style" },
+  { milestone: 400, message: "איזה כיף! בוא נשחק בכדור!", imagePrompt: "cute white maltipoo dog playing with a colorful ball cartoon style" },
+  { milestone: 500, message: "אני מרגיש כמו מלך! תודה!", imagePrompt: "cute white maltipoo dog wearing a crown king cartoon style" },
+  { milestone: 600, message: "וואו! אני טס לחלל! תראה אותי!", imagePrompt: "cute white maltipoo dog wearing astronaut suit in space cartoon style" },
+  { milestone: 700, message: "אני צולל בים עם הדגים! איזה יופי!", imagePrompt: "cute white maltipoo dog scuba diving underwater with fish cartoon style" },
+  { milestone: 800, message: "אני גיבור על! אני עף בשמיים!", imagePrompt: "cute white maltipoo dog wearing superhero cape flying cartoon style" },
+  { milestone: 900, message: "מסיבת ריקודים! בואו לרקוד איתי!", imagePrompt: "cute white maltipoo dog dancing with disco ball party cartoon style" }
+];
+
 export const PETS: PetProfile[] = [
   {
     id: 'guri',
@@ -71,17 +84,7 @@ export const PETS: PetProfile[] = [
       rate: 1.1,
       soundEffect: 'הַב הַב!'
     },
-    rewards: [
-      { milestone: 100, message: "אוף, הייתי כל כך צמא! תודה על המשקה!", imagePrompt: "cute white maltipoo dog drinking water from a bowl happy cartoon style" },
-      { milestone: 200, message: "הייתי ממש רעב, תודה רבה על האוכל!", imagePrompt: "cute white maltipoo dog eating a bone happy cartoon style" },
-      { milestone: 300, message: "וואי אני עייף... אני הולך לישון עד ה-100 הבא.", imagePrompt: "cute white maltipoo dog sleeping in a bed cozy cartoon style" },
-      { milestone: 400, message: "איזה כיף! בוא נשחק בכדור!", imagePrompt: "cute white maltipoo dog playing with a colorful ball cartoon style" },
-      { milestone: 500, message: "אני מרגיש כמו מלך! תודה!", imagePrompt: "cute white maltipoo dog wearing a crown king cartoon style" },
-      { milestone: 600, message: "וואו! אני טס לחלל! תראה אותי!", imagePrompt: "cute white maltipoo dog wearing astronaut suit in space cartoon style" },
-      { milestone: 700, message: "אני צולל בים עם הדגים! איזה יופי!", imagePrompt: "cute white maltipoo dog scuba diving underwater with fish cartoon style" },
-      { milestone: 800, message: "אני גיבור על! אני עף בשמיים!", imagePrompt: "cute white maltipoo dog wearing superhero cape flying cartoon style" },
-      { milestone: 900, message: "מסיבת ריקודים! בואו לרקוד איתי!", imagePrompt: "cute white maltipoo dog dancing with disco ball party cartoon style" }
-    ]
+    rewards: GURI_REWARDS
   },
   {
     id: 'albert',
@@ -154,7 +157,7 @@ export const PETS: PetProfile[] = [
   }
 ];
 
-// ... (rest of the file remains unchanged, HEBREW_ALPHABET etc.)
+// ... existing HEBREW_ALPHABET ...
 export const HEBREW_ALPHABET: HebrewLetter[] = [
   { char: 'א', name: 'Aleph', nameHebrew: 'אָלֶף' },
   { char: 'ב', name: 'Bet', nameHebrew: 'בֵּית' },
@@ -318,16 +321,46 @@ export const FALLBACK_RHYMES: RhymeQuestion[] = [
 ];
 
 export const FALLBACK_TWISTERS = [
-  { hebrew: 'שָׂרָה שָׁרָה שִׁיר שָׂמֵחַ', english: 'Sarah sang a happy song' },
-  { hebrew: 'בַּקְבּוּק בְּלִי פְּקָק', english: 'A bottle without a cap' },
-  { hebrew: 'גַּנָּן גִּדֵּל דָּגָן בַּגַּן', english: 'A gardener grew grain in the garden' },
-  { hebrew: 'שִׁשָּׁה שְׁזִיפִים שְׁזוּפִים', english: 'Six tanned plums' },
-  { hebrew: 'סוּס סִינִי סוֹחֵב שַׂק סוּכָּר', english: 'A Chinese horse carries a sack of sugar' },
-  { hebrew: 'שׁוֹטֵר שׁוֹטֶה שׁוֹתֶה שׁוֹקוֹ', english: 'A foolish policeman drinks hot cocoa' },
-  { hebrew: 'גַּד גִּדֵּל גְּדִי בַּגִּנָּה', english: 'Gad raised a goat in the garden' },
-  { hebrew: 'זְבוּב זִמְזֵם בְּאָזְנֵי זִיזִי', english: 'A fly buzzed in Zizi\'s ears' },
-  { hebrew: 'צִפּוֹר צִיְּצָה צִיּוּץ בְּצָהֳרַיִם', english: 'A bird chirped at noon' },
-  { hebrew: 'טַבָּח מְבַשֵּׁל בַּמִּטְבָּח', english: 'A cook cooks in the kitchen' }
+  {
+    hebrew: 'שָׂרָה שָׁרָה שִׁיר שָׂמֵחַ',
+    english: 'Sarah sang a happy song'
+  },
+  {
+    hebrew: 'בַּקְבּוּק בְּלִי פְּקָק',
+    english: 'A bottle without a cap'
+  },
+  {
+    hebrew: 'גַּנָּן גִּדֵּל דָּגָן בַּגַּן',
+    english: 'A gardener grew grain in the garden'
+  },
+  {
+    hebrew: 'שִׁשָּׁה שְׁזִיפִים שְׁזוּפִים',
+    english: 'Six tanned plums'
+  },
+  {
+    hebrew: 'סוּס סִינִי סוֹחֵב שַׂק סוּכָּר',
+    english: 'A Chinese horse carries a sack of sugar'
+  },
+  {
+    hebrew: 'שׁוֹטֵר שׁוֹטֶה שׁוֹתֶה שׁוֹקוֹ',
+    english: 'A foolish policeman drinks hot cocoa'
+  },
+  {
+    hebrew: 'גַּד גִּדֵּל גְּדִי בַּגִּנָּה',
+    english: 'Gad raised a goat in the garden'
+  },
+  {
+    hebrew: 'זְבוּב זִמְזֵם בְּאָזְנֵי זִיזִי',
+    english: 'A fly buzzed in Zizi\'s ears'
+  },
+  {
+    hebrew: 'צִפּוֹר צִיְּצָה צִיּוּץ בְּצָהֳרַיִם',
+    english: 'A bird chirped at noon'
+  },
+  {
+    hebrew: 'טַבָּח מְבַשֵּׁל בַּמִּטְבָּח',
+    english: 'A cook cooks in the kitchen'
+  }
 ];
 
 export const FALLBACK_SENTENCES = [
@@ -764,6 +797,7 @@ export const FALLBACK_SENTENCES_ENGLISH = [
 ];
 
 export const FALLBACK_HANGMAN_WORDS = [
+    { word: 'מַיִם', hint: 'Water', hebrewHint: 'כשצמאים , שותים אותי', imagePrompt: 'glass of water' },
     { word: 'שֶׁמֶשׁ', hint: 'Sun', hebrewHint: 'כדור צהוב גדול בשמיים שמאיר ביום ומחמם אותנו', imagePrompt: 'sun' },
     { word: 'פַּרְפַּר', hint: 'Butterfly', hebrewHint: 'חיה קטנה עם כנפיים צבעוניות שעפה בין פרחים', imagePrompt: 'butterfly' },
     { word: 'כַּדּוּר', hint: 'Ball', hebrewHint: 'חפץ עגול שבועטים בו או זורקים אותו במשחק', imagePrompt: 'ball' },
@@ -789,52 +823,4 @@ export const FALLBACK_HANGMAN_WORDS = [
     { word: 'שֻׁלְחָן', hint: 'Table', hebrewHint: 'רהיט שאוכלים עליו ארוחות או מכינים עליו שיעורים', imagePrompt: 'table' },
     { word: 'גִּיר', hint: 'Chalk', hebrewHint: 'אפשר לצייר איתו על הלוח או על המדרכה', imagePrompt: 'chalk' },
     { word: 'עִפָּרוֹן', hint: 'Pencil', hebrewHint: 'כותבים ומציירים איתו על דף, ואפשר למחוק אם טועים', imagePrompt: 'pencil' }
-];
-
-export const GURI_REWARDS: GuriReward[] = [
-    {
-        milestone: 100,
-        message: "אוף, הייתי כל כך צמא! תודה על המשקה!",
-        imagePrompt: "cute white maltipoo dog drinking water from a bowl happy cartoon style"
-    },
-    {
-        milestone: 200,
-        message: "הייתי ממש רעב, תודה רבה על האוכל!",
-        imagePrompt: "cute white maltipoo dog eating a bone happy cartoon style"
-    },
-    {
-        milestone: 300,
-        message: "וואי אני עייף... אני הולך לישון עד ה-100 הבא.",
-        imagePrompt: "cute white maltipoo dog sleeping in a bed cozy cartoon style"
-    },
-    {
-        milestone: 400,
-        message: "איזה כיף! בוא נשחק בכדור!",
-        imagePrompt: "cute white maltipoo dog playing with a colorful ball cartoon style"
-    },
-    {
-        milestone: 500,
-        message: "אני מרגיש כמו מלך! תודה!",
-        imagePrompt: "cute white maltipoo dog wearing a crown king cartoon style"
-    },
-    {
-        milestone: 600,
-        message: "וואו! אני טס לחלל! תראה אותי!",
-        imagePrompt: "cute white maltipoo dog wearing astronaut suit in space cartoon style"
-    },
-    {
-        milestone: 700,
-        message: "אני צולל בים עם הדגים! איזה יופי!",
-        imagePrompt: "cute white maltipoo dog scuba diving underwater with fish cartoon style"
-    },
-    {
-        milestone: 800,
-        message: "אני גיבור על! אני עף בשמיים!",
-        imagePrompt: "cute white maltipoo dog wearing superhero cape flying cartoon style"
-    },
-    {
-        milestone: 900,
-        message: "מסיבת ריקודים! בואו לרקוד איתי!",
-        imagePrompt: "cute white maltipoo dog dancing with disco ball party cartoon style"
-    }
 ];
