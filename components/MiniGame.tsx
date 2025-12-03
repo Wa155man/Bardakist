@@ -2,12 +2,12 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GameQuestion, AppSettings } from '../types';
 import { Button } from './Button';
-import { evaluatePronunciation, playTextToSpeech, getMiniGameImageUrl, prefetchTTS } from '../services/geminiService';
+import { evaluatePronunciation, playTextToSpeech, getMiniGameImageUrl, prefetchTTS, resumeAudioContext } from '../services/geminiService';
 import { HandwrittenLetter } from './HandwrittenLetter'; 
 
 interface MiniGameProps {
   question: GameQuestion;
-  nextQuestion?: GameQuestion; // New prop for preloading
+  nextQuestion?: GameQuestion; 
   onCorrect: () => void;
   onWrong: () => void;
   questionNumber: number;
@@ -32,11 +32,9 @@ export const MiniGame: React.FC<MiniGameProps> = ({
   const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
   const [isAnswered, setIsAnswered] = useState(false);
 
-  // States for Speak & Repeat Activity
   const [activityState, setActivityState] = useState<ActivityState>('answering');
   const [feedbackText, setFeedbackText] = useState('');
   
-  // Image Loading States
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   
@@ -78,28 +76,22 @@ export const MiniGame: React.FC<MiniGameProps> = ({
     setImageError(false);
     
     if (!isTutorialActive && settings.autoPlayAudio) {
-      // Slightly increased delay to allow slide-in transition to complete before speaking
       const timer = setTimeout(() => speak(question.word), 600);
       return () => clearTimeout(timer);
     }
   }, [question, speak, isTutorialActive, settings.autoPlayAudio]);
 
-  // Look-Ahead Preloading for Next Question
   useEffect(() => {
     if (nextQuestion) {
-        // 1. Prefetch Audio
         prefetchTTS(nextQuestion.word);
-        
-        // 2. Image prefetching is handled by the hidden <img> rendered below
     }
   }, [nextQuestion]);
 
   useEffect(() => {
-    // Safety timeout for image loading
     if (!imageLoaded && !imageError) {
       const timer = setTimeout(() => {
         if (!imageLoaded) setImageError(true);
-      }, 5000); // 5 seconds timeout
+      }, 5000); 
       return () => clearTimeout(timer);
     }
   }, [imageLoaded, imageError, question.id]);
@@ -131,6 +123,9 @@ export const MiniGame: React.FC<MiniGameProps> = ({
 
   const handleRecordButtonPress = async (e: React.SyntheticEvent) => {
     if (activityState !== 'speak_prompt') return;
+    
+    resumeAudioContext();
+    
     isPressedRef.current = true;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -168,6 +163,9 @@ export const MiniGame: React.FC<MiniGameProps> = ({
 
   const handleAnswer = (answer: string) => {
     if (isAnswered || isTutorialActive) return;
+    
+    resumeAudioContext();
+    
     setSelectedAnswer(answer);
     setIsAnswered(true);
     const isCorrect = answer === question.correctTranslation;
@@ -272,7 +270,7 @@ export const MiniGame: React.FC<MiniGameProps> = ({
           <div className="bg-gray-200 rounded-full h-3 md:h-4 flex-1">
             <div className="bg-green-500 h-3 md:h-4 rounded-full transition-all duration-500" style={{ width: `${(questionNumber / totalQuestions) * 100}%` }}></div>
           </div>
-          <Button onClick={handleReset} color="yellow" size="sm" className="h-6 w-6 p-0 rounded-full flex items-center justify-center text-xs">🔄</Button>
+          <Button onClick={handleReset} color="yellow" size="sm" className="h-6 w-6 p-0 rounded-full flex items-center justify-center text-xs" title="Reload Level">🔄</Button>
       </div>
 
       <div className="bg-white rounded-3xl shadow-2xl p-2 md:p-4 w-full text-center relative border-b-8 border-gray-100 flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -329,7 +327,7 @@ export const MiniGame: React.FC<MiniGameProps> = ({
              </div>
            )}
 
-           {/* Error State */}
+           {/* Error State - Fallback to Hint */}
            {imageError && (
              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 text-gray-400 rounded-2xl p-4 z-10 text-center">
                 <span className="text-5xl mb-2 opacity-50 grayscale">🖼️</span>
@@ -341,7 +339,7 @@ export const MiniGame: React.FC<MiniGameProps> = ({
 
            {/* Actual Image */}
            <img 
-               key={question.id} // Use ID to force re-mount on new question so skeleton appears
+               key={question.id} 
                src={imageSrc} 
                alt={question.correctTranslation}
                className={`w-full h-full object-contain rounded-xl transition-all duration-700 ease-in-out transform ${imageLoaded && !imageError ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}

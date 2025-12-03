@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { playTextToSpeech } from '../services/geminiService';
@@ -85,8 +86,8 @@ export const NamingGame: React.FC<NamingGameProps> = ({ onBack, settings, onEarn
 
     if (letter.char === target?.char) {
       setGameState('success');
-      setScore(s => s + 3); // Changed from 1 to 3
-      if (onEarnPoints) onEarnPoints(3); // Changed from 10 to 3
+      setScore(s => s + 3); 
+      if (onEarnPoints) onEarnPoints(3); 
       playTextToSpeech(target.nameHebrew); 
       
       localStorage.removeItem(STORAGE_KEY_STATE);
@@ -109,20 +110,15 @@ export const NamingGame: React.FC<NamingGameProps> = ({ onBack, settings, onEarn
 
   return (
     <div className="h-full w-full bg-orange-50 flex flex-col items-center p-4 relative overflow-hidden">
-       <div className="absolute top-[54px] left-8 z-10">
+       <div className="absolute top-[54px] left-8 z-10 flex gap-2">
          <Button onClick={onBack} color="red" size="sm">Back</Button>
+         <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
       </div>
       
       <div className="absolute top-[54px] right-8 flex flex-col items-end gap-1 z-10">
         <div className="bg-white px-4 py-2 rounded-full shadow font-bold text-orange-700 font-dynamic">
           Score: {score}
         </div>
-        <button 
-          onClick={handleReset}
-          className="text-xs text-orange-400 hover:text-orange-600 underline font-bold px-2 cursor-pointer font-dynamic"
-        >
-          Reset Score
-        </button>
       </div>
 
       <div className="mt-16 md:mt-24 text-center shrink-0">

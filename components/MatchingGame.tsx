@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { HEBREW_ALPHABET, ENGLISH_ALPHABET } from '../constants';
@@ -118,8 +119,8 @@ export const MatchingGame: React.FC<MatchingGameProps> = ({ onBack, settings, on
 
     if (isCorrect) {
         setCorrectId(letter.char);
-        setScore(s => s + 3); // Changed from 1 to 3
-        if (onEarnPoints) onEarnPoints(3); // Changed from 10 to 3
+        setScore(s => s + 3); 
+        if (onEarnPoints) onEarnPoints(3); 
         playTextToSpeech("Correct!"); 
         
         localStorage.removeItem(STORAGE_KEY_STATE);
@@ -148,20 +149,15 @@ export const MatchingGame: React.FC<MatchingGameProps> = ({ onBack, settings, on
 
   return (
     <div className="h-full w-full bg-green-100 flex flex-col items-center p-4 relative overflow-hidden">
-       <div className="absolute top-[54px] left-8 z-10">
+       <div className="absolute top-[54px] left-8 z-10 flex gap-2">
          <Button onClick={onBack} color="red" size="sm">Back</Button>
+         <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
       </div>
       
       <div className="absolute top-[54px] right-8 flex flex-col items-end gap-1 z-10">
         <div className="bg-white px-4 py-2 rounded-full shadow font-bold text-green-700 font-dynamic">
           Score: {score}
         </div>
-        <button 
-          onClick={handleReset}
-          className="text-xs text-green-600 hover:text-green-800 underline font-bold px-2 cursor-pointer font-dynamic"
-        >
-          Reset Score
-        </button>
       </div>
 
       {/* Language Toggle */}

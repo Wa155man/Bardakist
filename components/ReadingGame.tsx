@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { ReadingQuestion } from '../types';
@@ -65,6 +66,12 @@ export const ReadingGame: React.FC<ReadingGameProps> = ({ questions, onBack, onL
     }
   };
 
+  const handleReset = () => {
+      setCurrentIndex(0);
+      setCorrectCount(0);
+      setTotalCount(0);
+  };
+
   if (!currentQ) return (
       <div className="h-full w-full bg-cyan-50 flex flex-col items-center justify-center p-4">
           <div className="w-12 h-12 border-4 border-cyan-200 border-t-cyan-600 rounded-full animate-spin mb-4"></div>
@@ -74,8 +81,9 @@ export const ReadingGame: React.FC<ReadingGameProps> = ({ questions, onBack, onL
 
   return (
     <div className="h-full w-full bg-cyan-50 flex flex-col relative overflow-hidden">
-      <div className="absolute top-[46px] left-4 z-20">
+      <div className="absolute top-[46px] left-4 z-20 flex gap-2">
          <Button onClick={onBack} color="red" size="sm">Back</Button>
+         <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
       </div>
       
       <div className="absolute top-[46px] right-4 z-20">

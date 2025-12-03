@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './Button';
 import { playTextToSpeech, prefetchTTS, resumeAudioContext } from '../services/geminiService';
@@ -258,11 +259,18 @@ export const DictationGame: React.FC<DictationGameProps> = ({ onBack, onEarnPoin
     return Math.round((correct / items.length) * 100);
   };
 
+  const handleReset = () => {
+      setMode('menu');
+      setItems([]);
+      setUserAnswers([]);
+      setCurrentIndex(0);
+  };
+
   // --- MENU SCREEN ---
   if (mode === 'menu') {
     return (
         <div className="h-full w-full bg-pink-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-            <div className="absolute top-[54px] left-8 z-10">
+            <div className="absolute top-[54px] left-8 z-10 flex gap-2">
                 <Button onClick={onBack} color="red" size="sm">חֲזָרָה</Button>
             </div>
             
@@ -294,8 +302,9 @@ export const DictationGame: React.FC<DictationGameProps> = ({ onBack, onEarnPoin
   if (mode === 'setup') {
     return (
       <div className="h-full w-full bg-pink-50 flex flex-col p-4 relative overflow-hidden">
-        <div className="absolute top-[54px] left-8 z-10">
+        <div className="absolute top-[54px] left-8 z-10 flex gap-2">
            <Button onClick={() => setMode('menu')} color="red" size="sm">חזרה</Button>
+           <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
         </div>
 
         <h1 className="text-3xl font-black text-pink-600 mt-16 mb-4 text-center font-dynamic shrink-0">
@@ -450,8 +459,9 @@ export const DictationGame: React.FC<DictationGameProps> = ({ onBack, onEarnPoin
   if (mode === 'memorize') {
     return (
       <div className="h-full w-full bg-pink-50 flex flex-col items-center p-4 relative overflow-hidden">
-         <div className="absolute top-[54px] left-8 z-10">
+         <div className="absolute top-[54px] left-8 z-10 flex gap-2">
             <Button onClick={() => setMode('setup')} color="blue" size="sm">חזרה</Button>
+            <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
          </div>
 
          <h1 className="text-3xl font-black text-pink-600 mt-16 mb-2 text-center font-dynamic shrink-0">זִכְרוּ אֶת הַמִּילִים</h1>
@@ -493,8 +503,9 @@ export const DictationGame: React.FC<DictationGameProps> = ({ onBack, onEarnPoin
 
       return (
         <div className="h-full w-full bg-pink-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-           <div className="absolute top-[54px] left-8 z-10">
+           <div className="absolute top-[54px] left-8 z-10 flex gap-2">
              <Button onClick={onBack} color="red" size="sm">חֲזָרָה</Button>
+             <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
            </div>
            
            <div className="absolute top-[54px] right-8 z-10 bg-white px-4 py-2 rounded-full shadow font-bold text-pink-600">
@@ -554,8 +565,9 @@ export const DictationGame: React.FC<DictationGameProps> = ({ onBack, onEarnPoin
   
   return (
     <div className="h-full w-full bg-pink-50 flex flex-col p-4 relative overflow-hidden">
-       <div className="absolute top-[54px] left-8 z-10">
+       <div className="absolute top-[54px] left-8 z-10 flex gap-2">
          <Button onClick={onBack} color="red" size="sm">חֲזָרָה</Button>
+         <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
        </div>
 
        <div className="mt-20 max-w-3xl mx-auto w-full bg-white rounded-3xl shadow-2xl p-6 border-b-8 border-pink-200 flex-1 flex flex-col min-h-0 overflow-hidden">

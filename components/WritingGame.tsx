@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './Button';
 import { HEBREW_ALPHABET, ENGLISH_ALPHABET } from '../constants';
@@ -165,12 +166,18 @@ export const WritingGame: React.FC<WritingGameProps> = ({ onBack, settings, onEa
     setPracticeMode(prev => prev === 'to_handwriting' ? 'to_print' : 'to_handwriting');
   };
 
+  const handleReset = () => {
+      setScore(0);
+      startRound();
+  };
+
   if (!currentLetter) return null;
 
   return (
     <div className="h-full w-full bg-purple-50 flex flex-col items-center overflow-hidden relative p-4">
       <div className="absolute top-[54px] left-8 z-20 flex items-center gap-2">
          <Button onClick={onBack} color="red" size="sm">Back</Button>
+         <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
       </div>
       <div className="absolute top-[54px] right-8 z-20 bg-white px-4 py-2 rounded-full shadow font-bold text-purple-700">
          Score: {score}
@@ -229,14 +236,15 @@ export const WritingGame: React.FC<WritingGameProps> = ({ onBack, settings, onEa
         </button>
       </div>
 
-      <h1 className="text-xl md:text-2xl font-black text-purple-600 mt-44 md:mt-52 mb-2 font-dynamic text-center shrink-0">
+      {/* Reduced top margin to pull content up */}
+      <h1 className="text-xl md:text-2xl font-black text-purple-600 mt-40 md:mt-48 mb-1 font-dynamic text-center shrink-0 z-10 relative">
         {language === 'hebrew' 
             ? (practiceMode === 'to_handwriting' ? 'כיתבו בכתב יד' : 'כיתבו בכתב דפוס')
             : (practiceMode === 'to_handwriting' ? 'Write in Cursive' : 'Write in Print')
         }
       </h1>
       
-      <div className="flex gap-4 md:gap-8 items-center justify-center mb-2 shrink-0">
+      <div className="flex gap-4 md:gap-8 items-center justify-center mb-1 shrink-0">
           <div className="flex flex-col items-center">
               <div className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-2xl shadow border-2 border-purple-100 flex items-center justify-center">
                 {practiceMode === 'to_handwriting' ? (
@@ -284,7 +292,8 @@ export const WritingGame: React.FC<WritingGameProps> = ({ onBack, settings, onEa
           </div>
       </div>
 
-      <div className="relative flex-1 min-h-0 w-full max-w-[350px] aspect-square mx-auto border-4 border-dashed border-purple-200 rounded-2xl bg-white shadow-lg overflow-hidden touch-none mt-2">
+      {/* Writing Pad - Reduced Height and made more flexible */}
+      <div className="relative flex-1 min-h-[250px] w-full max-w-[350px] mx-auto border-4 border-dashed border-purple-200 rounded-2xl bg-white shadow-lg overflow-hidden touch-none mt-1">
          
          <div className="absolute inset-0 pointer-events-none">
              <div className="absolute top-[25%] left-0 w-full h-0.5 bg-blue-100"></div>

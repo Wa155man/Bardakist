@@ -1,24 +1,29 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
-import { playTextToSpeech } from '../services/geminiService';
+import { playTextToSpeech, getHangmanImageUrl, resumeAudioContext } from '../services/geminiService';
 
 interface HangmanGameProps {
   words: { word: string, hint: string, hebrewHint: string, imagePrompt: string }[];
   onBack: () => void;
-  onLoadMore?: () => Promise<void>;
+  onLoadMore?: (lang: 'hebrew' | 'english') => Promise<void>;
   onEarnPoints?: (amount: number) => void;
 }
 
-// Hebrew Alphabet for Keyboard including Sofit letters
+// Hebrew Alphabet
 const HEBREW_KEYS = [
   'א','ב','ג','ד','ה','ו','ז','ח','ט','י',
   'כ','ך','ל','מ','ם','נ','ן','ס','ע','פ',
   'ף','צ','ץ','ק','ר','ש','ת'
 ];
 
+// English Alphabet
+const ENGLISH_KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+
 const MAX_WRONG = 6;
 
 export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadMore, onEarnPoints }) => {
+  const [language, setLanguage] = useState<'hebrew' | 'english'>('hebrew');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [guessedLetters, setGuessedLetters] = useState<Set<string>>(new Set());
   const [wrongGuesses, setWrongGuesses] = useState(0);
@@ -28,26 +33,23 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Normalize word by removing Nikud for checking
+  // Normalize word by removing Nikud for checking (Hebrew only)
   const removeNikud = (str: string) => {
     if (!str) return "";
     return str.replace(/[\u0591-\u05C7]/g, "");
   };
   
   const fallbackWord = { word: 'תּוֹדָה', hint: 'Thanks', hebrewHint: 'מילה שאומרים כשמקבלים משהו', imagePrompt: 'thank you' };
-  const currentWordObj = (words && words[currentIndex]) ? words[currentIndex] : fallbackWord;
+  const currentWordObj = (words && words.length > 0) ? words[currentIndex] : fallbackWord;
   
-  const wordToPlay = currentWordObj.word || 'שגיאה';
-  const cleanWord = removeNikud(wordToPlay);
+  // Safe check to avoid crash if words is empty temporarily during switch
+  const wordToPlay = currentWordObj ? currentWordObj.word : (language === 'hebrew' ? 'תּוֹדָה' : 'THANKS');
+  
+  // Prepare clean word for checking
+  // Hebrew: Remove Nikud. English: Ensure Uppercase.
+  const cleanWord = language === 'hebrew' ? removeNikud(wordToPlay) : wordToPlay.toUpperCase();
 
-  const getImageUrl = (w: typeof currentWordObj) => {
-      // USE SIMPLIFIED PROMPT FOR RELIABILITY
-      const cleanPrompt = w.hint; // Just use the English word (e.g. "flower")
-      const seed = w.hint;        // Use the same for seed
-      return `https://image.pollinations.ai/prompt/cartoon%20${encodeURIComponent(cleanPrompt)}?width=250&height=250&model=flux&nologo=true&seed=${encodeURIComponent(seed)}`;
-  };
-
-  const imageUrl = getImageUrl(currentWordObj);
+  const imageUrl = currentWordObj ? getHangmanImageUrl(currentWordObj.hint) : '';
 
   useEffect(() => {
     setGuessedLetters(new Set());
@@ -55,7 +57,24 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
     setStatus('playing');
     setImageLoaded(false);
     setImageError(false);
-  }, [currentIndex]);
+  }, [currentIndex, language, words]); // Reset when language or words change
+
+  // Load initial words when language changes if needed (or assume parent updates 'words' prop)
+  // But 'HangmanGame' receives 'words'. App must handle the fetch.
+  // We trigger onLoadMore when switching language.
+  const handleLanguageChange = async (lang: 'hebrew' | 'english') => {
+      if (lang === language) return;
+      setLanguage(lang);
+      setScore(0);
+      setGuessedLetters(new Set());
+      setWrongGuesses(0);
+      if (onLoadMore) {
+          setIsLoadingNext(true);
+          await onLoadMore(lang);
+          setIsLoadingNext(false);
+          setCurrentIndex(0); // Reset to first word of new list
+      }
+  };
 
   useEffect(() => {
     if (status !== 'playing') return;
@@ -69,21 +88,17 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
       if (isWon && cleanWord.length > 0) {
         setStatus('won');
         playTextToSpeech("You did it!");
-        setScore(prev => prev + 3); // Changed from 10 to 3
-        if (onEarnPoints) onEarnPoints(3); // Changed from 10 to 3
+        setScore(prev => prev + 3); 
+        if (onEarnPoints) onEarnPoints(3); 
         
         const handleWinTransition = async () => {
              if (currentIndex < words.length - 1) {
-                // Next word is available in current batch
                 setTimeout(() => {
                   setCurrentIndex(prev => prev + 1);
                 }, 2500);
               } else if (onLoadMore) {
-                // End of batch, load more
                 setIsLoadingNext(true);
-                await onLoadMore();
-                // After loading, we assume the list has grown. 
-                // We advance index after a short delay to show the win state
+                await onLoadMore(language);
                 setTimeout(() => {
                     setIsLoadingNext(false);
                     setCurrentIndex(prev => prev + 1);
@@ -93,10 +108,12 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
         handleWinTransition();
       }
     }
-  }, [guessedLetters, wrongGuesses, cleanWord, currentIndex, words.length, status, onLoadMore, onEarnPoints]);
+  }, [guessedLetters, wrongGuesses, cleanWord, currentIndex, words.length, status, onLoadMore, onEarnPoints, language]);
 
   const handleGuess = (char: string) => {
     if (status !== 'playing' || guessedLetters.has(char)) return;
+
+    resumeAudioContext();
 
     const newGuessed = new Set(guessedLetters);
     newGuessed.add(char);
@@ -115,9 +132,15 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
     setImageError(false);
   };
 
+  const handleReset = () => {
+      handleRetry();
+      setCurrentIndex(0);
+      setScore(0);
+  };
+
   const renderWord = () => {
     return (
-      <div className="flex flex-wrap justify-center gap-2 my-4 shrink-0" dir="rtl">
+      <div className="flex flex-wrap justify-center gap-2 my-4 shrink-0" dir={language === 'hebrew' ? "rtl" : "ltr"}>
         {cleanWord.split('').map((char, idx) => {
           const isGuessed = guessedLetters.has(char) || status !== 'playing';
           return (
@@ -184,36 +207,53 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
     );
   };
 
+  const keysToRender = language === 'hebrew' ? HEBREW_KEYS : ENGLISH_KEYS;
+
   return (
     <div className="h-full w-full bg-indigo-50 flex flex-col items-center p-2 md:p-4 relative overflow-hidden">
       {/* Look-Ahead Preloader: Load next 3 images invisibly */}
       <div style={{ display: 'none' }}>
           {words.slice(currentIndex + 1, currentIndex + 4).map((w, i) => (
-              <img key={`preload-${i}`} src={getImageUrl(w)} alt="preload" />
+              <img key={`preload-${i}`} src={getHangmanImageUrl(w.hint)} alt="preload" />
           ))}
       </div>
 
-      <div className="absolute top-[54px] left-8 z-10">
+      <div className="absolute top-[54px] left-8 z-10 flex gap-2">
          <Button onClick={onBack} color="red" size="sm">חֲזָרָה</Button>
+         <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
       </div>
 
-      <div className="absolute top-[110px] left-8 flex flex-col gap-2 z-10 items-start">
-         <div className="bg-white px-4 py-2 rounded-full shadow font-bold text-indigo-700 border-2 border-indigo-100 text-sm">
-            ניקוד: {score}
-         </div>
-         <div className="bg-white px-4 py-2 rounded-full shadow font-bold text-indigo-700 border-2 border-indigo-100 text-sm">
-            מילים: {currentIndex + 1}
-         </div>
+      <div className="absolute top-[54px] right-8 flex flex-col items-end gap-1 z-10">
+        <div className="bg-white px-4 py-2 rounded-full shadow font-bold text-indigo-700 border-2 border-indigo-100 text-sm">
+           Score: {score}
+        </div>
       </div>
 
-      <h1 className="text-2xl md:text-3xl font-black text-indigo-600 mt-12 md:mt-16 mb-2 font-round text-center shrink-0">גַלֵּה אֶת הַמִּילָּה</h1>
+      {/* Language Toggle */}
+      <div className="absolute top-[110px] left-1/2 transform -translate-x-1/2 z-20 flex bg-white/90 backdrop-blur shadow-md rounded-xl border-2 border-indigo-200 overflow-hidden w-48">
+            <button 
+                onClick={() => handleLanguageChange('hebrew')}
+                className={`flex-1 py-1 text-sm font-bold ${language === 'hebrew' ? 'bg-indigo-500 text-white' : 'text-gray-500 hover:bg-indigo-50'}`}
+            >
+                עברית 🇮🇱
+            </button>
+            <button 
+                onClick={() => handleLanguageChange('english')}
+                className={`flex-1 py-1 text-sm font-bold ${language === 'english' ? 'bg-indigo-500 text-white' : 'text-gray-500 hover:bg-indigo-50'}`}
+            >
+                English 🇺🇸
+            </button>
+      </div>
+
+      <h1 className="text-2xl md:text-3xl font-black text-indigo-600 mt-32 md:mt-20 mb-2 font-round text-center shrink-0">
+        {language === 'hebrew' ? 'גַלֵּה אֶת הַמִּילָּה' : 'GUESS THE WORD'}
+      </h1>
       
-      {/* Game Visuals: Robot + Hint Image */}
       <div className="flex-1 w-full max-w-3xl flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 min-h-0 shrink-0">
         <div className="flex flex-col items-center">
            {renderRobot()}
            <p className={`text-indigo-400 text-xs md:text-sm mt-1 font-bold transition-opacity duration-500 ${status === 'lost' ? 'opacity-0' : 'opacity-100'}`}>
-               {status === 'playing' ? "אל תתנו לרובוט להשלים את עצמו - אחרת תיפסלו" : ""}
+               {status === 'playing' ? (language === 'hebrew' ? "אל תתנו לרובוט להשלים את עצמו - אחרת תיפסלו" : "Don't let the robot complete itself!") : ""}
            </p>
         </div>
 
@@ -226,7 +266,7 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
                     <div className="absolute inset-0 z-20 bg-indigo-50 flex flex-col items-center justify-center p-4 text-center">
                         <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-400 rounded-full animate-spin mb-2 shrink-0"></div>
                         <p className="text-indigo-600 text-sm font-bold font-dynamic leading-tight overflow-y-auto max-h-full">
-                            {currentWordObj.hebrewHint}
+                            {currentWordObj?.hebrewHint || "..."}
                         </p>
                     </div>
                 )}
@@ -236,32 +276,35 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
                     <div className="absolute inset-0 z-20 bg-indigo-50 flex flex-col items-center justify-center p-2 text-center">
                         <span className="text-4xl mb-1 opacity-50">🎨</span>
                         <span className="text-indigo-600 text-xs font-bold font-dynamic leading-tight line-clamp-3">
-                            {currentWordObj.hebrewHint || "תמונה לא זמינה"}
+                            {currentWordObj?.hebrewHint || "Image unavailable"}
                         </span>
                     </div>
                 )}
 
                 {/* Actual Image */}
-                <img 
-                    key={currentWordObj.word}
-                    src={imageUrl}
-                    alt={currentWordObj.hint}
-                    onLoad={() => setImageLoaded(true)}
-                    onError={() => {
-                        setImageError(true);
-                        setImageLoaded(true);
-                    }}
-                    className={`w-full h-full object-cover transition-all duration-700 ease-out ${imageLoaded && !imageError ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
-                />
+                {currentWordObj && (
+                    <img 
+                        key={currentWordObj.word}
+                        src={imageUrl}
+                        alt={currentWordObj.hint}
+                        onLoad={() => setImageLoaded(true)}
+                        onError={() => {
+                            setImageError(true);
+                            setImageLoaded(true);
+                        }}
+                        className={`w-full h-full object-cover transition-all duration-700 ease-out ${imageLoaded && !imageError ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
+                        crossOrigin="anonymous"
+                    />
+                )}
              </div>
              
              {/* English Hint */}
              <div className="text-center mb-2">
                 <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs md:text-sm font-bold shadow-sm border border-indigo-200 block mb-1">
-                    {currentWordObj.hint}
+                    {currentWordObj?.hint || ""}
                 </span>
-                <span className="text-indigo-500 text-xs md:text-sm font-bold block max-w-[200px] leading-tight" dir="rtl">
-                    {currentWordObj.hebrewHint}
+                <span className="text-indigo-500 text-xs md:text-sm font-bold block max-w-[200px] leading-tight" dir={language === 'hebrew' ? "rtl" : "ltr"}>
+                    {currentWordObj?.hebrewHint || ""}
                 </span>
              </div>
         </div>
@@ -273,22 +316,26 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
 
          {status === 'won' && (
              <div className="mb-2 animate-bounce">
-                 <span className="text-green-500 font-black text-xl md:text-2xl">כל הכבוד! (+3)</span>
+                 <span className="text-green-500 font-black text-xl md:text-2xl">
+                     {language === 'hebrew' ? 'כל הכבוד! (+3)' : 'Well Done! (+3)'}
+                 </span>
              </div>
          )}
          {status === 'lost' && (
              <div className="mb-2">
-                 <span className="text-red-500 font-black text-lg md:text-xl">הסתיים המשחק! המילה: {wordToPlay}</span>
+                 <span className="text-red-500 font-black text-lg md:text-xl">
+                    {language === 'hebrew' ? 'הסתיים המשחק! המילה: ' : 'Game Over! Word: '} {wordToPlay}
+                 </span>
                  <div className="mt-1">
-                    <Button onClick={handleRetry} color="blue" size="sm">נסה שוב</Button>
+                    <Button onClick={handleRetry} color="blue" size="sm">{language === 'hebrew' ? 'נסה שוב' : 'Try Again'}</Button>
                  </div>
              </div>
          )}
       </div>
 
       {/* Keyboard */}
-      <div className="grid grid-cols-7 gap-1 md:gap-2 max-w-3xl w-full shrink-0 mb-2" dir="rtl">
-        {HEBREW_KEYS.map((char) => {
+      <div className={`grid ${language === 'hebrew' ? 'grid-cols-7' : 'grid-cols-7'} gap-1 md:gap-2 max-w-3xl w-full shrink-0 mb-2`} dir={language === 'hebrew' ? "rtl" : "ltr"}>
+        {keysToRender.map((char) => {
             const isUsed = guessedLetters.has(char);
             const isWrong = isUsed && !cleanWord.includes(char);
             const isCorrect = isUsed && cleanWord.includes(char);

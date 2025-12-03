@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { HEBREW_ALPHABET } from '../constants';
@@ -122,6 +123,10 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBack, onEarnPoints }) 
     }
   };
 
+  const handleReset = () => {
+      setGameState('setup');
+  };
+
   // --- SETUP SCREEN ---
   if (gameState === 'setup') {
       return (
@@ -182,8 +187,9 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({ onBack, onEarnPoints }) 
   // --- PLAY SCREEN ---
   return (
     <div className="h-full w-full bg-yellow-100 flex flex-col items-center p-2 md:p-4 relative overflow-hidden">
-       <div className="absolute top-[54px] left-8 z-10">
+       <div className="absolute top-[54px] left-8 z-10 flex gap-2">
          <Button onClick={() => setGameState('setup')} color="red" size="sm">Back</Button>
+         <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
       </div>
 
       {/* Scoreboard Area */}

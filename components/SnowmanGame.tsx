@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SentenceQuestion, AppSettings } from '../types';
 import { Button } from './Button';
@@ -105,6 +106,11 @@ export const SnowmanGame: React.FC<SnowmanGameProps> = ({
     }
   };
 
+  const handleReset = () => {
+      setPartsBuilt(0);
+      setCurrentIndex(0);
+  };
+
   const renderSnowman = () => {
     return (
       <svg viewBox="0 0 200 300" className="w-full h-full filter drop-shadow-xl">
@@ -192,16 +198,17 @@ export const SnowmanGame: React.FC<SnowmanGameProps> = ({
                  style={{
                    width: Math.random() * 10 + 5 + 'px',
                    height: Math.random() * 10 + 5 + 'px',
-                   top: Math.random() * 100 + '%',
-                   left: Math.random() * 100 + '%',
+                   top: Math.random() * 10 + '%',
+                   left: Math.random() * 10 + '%',
                    animationDuration: Math.random() * 5 + 3 + 's'
                  }}
             ></div>
          ))}
       </div>
 
-      <div className="absolute top-[54px] left-8 z-20">
+      <div className="absolute top-[54px] left-8 z-20 flex gap-2">
          <Button onClick={onBack} color="red" size="sm">Back</Button>
+         <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
       </div>
       
       <div className="absolute top-[54px] right-8 z-20">

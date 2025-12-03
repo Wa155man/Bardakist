@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { RhymeQuestion } from '../types';
-import { playTextToSpeech } from '../services/geminiService';
+import { playTextToSpeech, prefetchTTS, resumeAudioContext } from '../services/geminiService';
 
 interface RhymeGameProps {
   questions: RhymeQuestion[];
@@ -27,7 +28,12 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
       setIsAnswered(false);
       setIsCorrect(false);
       setIsLoadingNext(false);
+      
+      // Play target word immediately (after short delay for transition)
       setTimeout(() => playTextToSpeech(currentQuestion.targetWord), 500);
+
+      // Prefetch audio for all options so they play instantly on click
+      allOptions.forEach(opt => prefetchTTS(opt));
     }
   }, [currentQuestion]);
 
@@ -40,6 +46,9 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
 
   const handleOptionClick = async (option: string) => {
     if (isAnswered || isLoadingNext) return;
+
+    // Ensure Audio Context is active on user interaction
+    resumeAudioContext();
 
     setIsAnswered(true);
     const correct = option === currentQuestion.rhymeWord;
@@ -74,7 +83,14 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
 
   const playWord = (e: React.MouseEvent, word: string) => {
     e.stopPropagation();
+    e.preventDefault(); // Prevent focus/other defaults
+    resumeAudioContext(); // Crucial for mobile/Safari
     playTextToSpeech(word);
+  };
+
+  const handleReset = () => {
+      setCurrentIndex(0);
+      setScore(0);
   };
 
   if (!currentQuestion) return (
@@ -105,15 +121,17 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
          ))}
       </div>
 
-      <div className="absolute top-[54px] left-8 z-10">
+      <div className="absolute top-[54px] left-8 z-10 flex gap-2">
          <Button onClick={onBack} color="red" size="sm">חֲזָרָה</Button>
+         <Button onClick={handleReset} color="yellow" size="sm">🔄</Button>
       </div>
       
       <div className="absolute top-[54px] right-8 bg-white px-4 py-2 rounded-full shadow font-bold text-blue-700 z-10">
         ניקוד: {score}
       </div>
 
-      <h1 className="text-3xl md:text-4xl font-black text-blue-600 mt-16 md:mt-24 mb-2 font-round text-center drop-shadow-sm shrink-0">
+      {/* Adjusted marginTop for mobile (mt-24 -> mt-32) to lower it */}
+      <h1 className="text-3xl md:text-4xl font-black text-blue-600 mt-32 md:mt-24 mb-2 font-round text-center drop-shadow-sm shrink-0">
         זמן לחרוזים!
       </h1>
       <p className="text-gray-500 mb-6 font-bold shrink-0">מה מתחרז עם...</p>
@@ -121,7 +139,7 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
       {/* Target Word Card - Flexible Height */}
       <div className="flex-1 flex items-center justify-center w-full min-h-0 mb-6">
         <div className="relative bg-white rounded-3xl shadow-2xl p-4 md:p-6 border-b-8 border-blue-200 w-full max-w-md flex flex-col items-center animate-float cursor-pointer hover:scale-105 transition-transform shrink-0 relative overflow-hidden"
-            onClick={() => playTextToSpeech(currentQuestion.targetWord)}>
+            onClick={(e) => playWord(e, currentQuestion.targetWord)}>
             
             {isLoadingNext && (
                 <div className="absolute inset-0 bg-white/95 flex flex-col items-center justify-center z-20 rounded-3xl">
