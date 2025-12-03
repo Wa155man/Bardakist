@@ -301,7 +301,7 @@ export const App: React.FC = () => {
             setRhymeQuestions(data);
             setRhymeHistory(new Set(data.map(q=>q.targetWord)));
           } else if (optionId === 'reading') {
-            setReadingQuestions(await generateReadingQuestions());
+            setReadingQuestions(await generateReadingQuestions([])); // Initialize with new unique questions
           }
         } catch (e) { console.error(e); } finally { setIsLoading(false); }
       }
@@ -310,7 +310,8 @@ export const App: React.FC = () => {
   
   const handleLoadMoreReading = async () => {
     try { 
-      const moreQuestions = await generateReadingQuestions();
+      const currentIds = readingQuestions.map(q => q.id);
+      const moreQuestions = await generateReadingQuestions(currentIds);
       setReadingQuestions(prev => [...prev, ...moreQuestions]); 
     } catch (e) { console.error(e); }
   };
@@ -337,7 +338,7 @@ export const App: React.FC = () => {
   const handleCorrectAnswer = async () => {
     handleEarnPoints(3);
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+      setCurrentQuestionIndex(prev => prev + 1);
       setNextQuestion(questions[currentQuestionIndex + 2]);
     } else {
       await handleLoadMorePractice();

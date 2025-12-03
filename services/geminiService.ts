@@ -1,6 +1,7 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { GameQuestion, VowelType, SentenceQuestion, RhymeQuestion, ReadingQuestion } from "../types";
-import { VOWEL_SPECIFIC_FALLBACKS, FALLBACK_TWISTERS, FALLBACK_SENTENCES, FALLBACK_SENTENCES_ENGLISH, FALLBACK_RHYMES, FALLBACK_HANGMAN_WORDS, FALLBACK_HANGMAN_WORDS_ENGLISH } from "../constants";
+import { VOWEL_SPECIFIC_FALLBACKS, FALLBACK_TWISTERS, FALLBACK_SENTENCES, FALLBACK_SENTENCES_ENGLISH, FALLBACK_RHYMES, FALLBACK_HANGMAN_WORDS, FALLBACK_HANGMAN_WORDS_ENGLISH, FALLBACK_READING_QUESTIONS } from "../constants";
 
 const initializeGenAI = () => {
   // Safe check for offline mode
@@ -179,14 +180,16 @@ const speakBrowser = (text: string) => {
     } else {
         u.lang = 'en-US';
     }
-    u.rate = 0.95;
-    u.pitch = 1.1;
+    // High pitch + Fast rate = Young, lively, fun voice (less robotic)
+    u.rate = 1.2; 
+    u.pitch = 1.4; 
     window.speechSynthesis.speak(u);
 };
 
 export const playTextToSpeech = async (text: string) => {
   if (!text) return;
-  const isShort = text.length < 60; 
+  // Increase threshold to 200 chars to ensure reading passages (usually 60-150 chars) play instantly via browser
+  const isShort = text.length < 200; 
   const ctx = getAudioContext();
   
   if (ctx && ttsCache.has(text)) {
@@ -275,14 +278,17 @@ export const generateRhymeQuestions = async (excludeWords: string[] = []): Promi
     return getFallback();
 };
 
-export const generateReadingQuestions = async (): Promise<ReadingQuestion[]> => {
-    return [{
-      id: 'read-fb',
-      passage: 'דָּנִי הָלַךְ לַגַּן. הוּא רָאָה פַּרְפַּר כָּחֹל. הַפַּרְפַּר עָף לַפֶּרַח הָאָדֹם.',
-      question: 'לְאָן עָף הַפַּרְפַּר?',
-      options: ['לַפֶּרַח הָאָדֹם', 'לַעֵץ הַגָּבוֹהַ', 'לַבַּיִת שֶׁל דָּנִי', 'לַשָּׁמַיִם'],
-      correctAnswer: 'לַפֶּרַח הָאָדֹם'
-    }];
+export const generateReadingQuestions = async (excludeIds: string[] = []): Promise<ReadingQuestion[]> => {
+    // Filter out previously seen questions
+    const available = FALLBACK_READING_QUESTIONS.filter(q => !excludeIds.includes(q.id));
+    
+    // If all used, recycle from full list to prevent empty state
+    const source = available.length > 0 ? available : FALLBACK_READING_QUESTIONS;
+    
+    // Pick one random story
+    const random = source[Math.floor(Math.random() * source.length)];
+    
+    return [random];
 };
 
 export const generateTongueTwister = async (): Promise<{hebrew: string, english: string}> => {

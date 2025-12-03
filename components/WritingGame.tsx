@@ -14,7 +14,6 @@ interface WritingGameProps {
 
 type PracticeMode = 'to_handwriting' | 'to_print';
 type Language = 'hebrew' | 'english';
-type EnglishCase = 'upper' | 'lower';
 
 export const WritingGame: React.FC<WritingGameProps> = ({ onBack, settings, onEarnPoints }) => {
   const [currentLetter, setCurrentLetter] = useState<HebrewLetter | null>(null);
@@ -26,7 +25,6 @@ export const WritingGame: React.FC<WritingGameProps> = ({ onBack, settings, onEa
   
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('to_handwriting');
   const [language, setLanguage] = useState<Language>('hebrew');
-  const [englishCase, setEnglishCase] = useState<EnglishCase>('upper');
 
   // Determine font
   const handwrittenFontStyle = (settings?.fontStyle === 'hand1') ? 'hand1' : 'playpen';
@@ -37,17 +35,14 @@ export const WritingGame: React.FC<WritingGameProps> = ({ onBack, settings, onEa
 
   useEffect(() => {
     startRound();
-  }, [practiceMode, language, englishCase]);
+  }, [practiceMode, language]);
 
   const startRound = () => {
     let sourceAlphabet = HEBREW_ALPHABET;
     
     if (language === 'english') {
-        if (englishCase === 'upper') {
-            sourceAlphabet = ENGLISH_ALPHABET.slice(0, 26); // A-Z
-        } else {
-            sourceAlphabet = ENGLISH_ALPHABET.slice(26, 52); // a-z
-        }
+        // English Mode: Always select from Uppercase (0-25) as the base identifier
+        sourceAlphabet = ENGLISH_ALPHABET.slice(0, 26); 
     }
 
     const randomLetter = sourceAlphabet[Math.floor(Math.random() * sourceAlphabet.length)];
@@ -119,6 +114,31 @@ export const WritingGame: React.FC<WritingGameProps> = ({ onBack, settings, onEa
     lastPos.current = null;
   };
 
+  // Determine Characters for Display and Target
+  let sourceChar = currentLetter?.char || '';
+  let targetChar = currentLetter?.char || '';
+  let isEnglish = language === 'english';
+
+  if (currentLetter && isEnglish) {
+      const upper = currentLetter.char.toUpperCase();
+      const lower = currentLetter.char.toLowerCase();
+      
+      if (practiceMode === 'to_handwriting') {
+          // Show Capital Print -> Write Lowercase Hand
+          sourceChar = upper;
+          targetChar = lower;
+      } else {
+          // Show Lowercase Hand -> Write Capital Print
+          sourceChar = lower;
+          targetChar = upper;
+      }
+  }
+
+  // Determine Arrow Direction
+  // Hebrew (RTL): Flow is Right to Left (Start -> End). So Arrow points Left.
+  // English (LTR): Flow is Left to Right. Arrow points Right.
+  const arrowIcon = language === 'hebrew' ? '⬅' : '➜';
+
   const checkDrawing = async () => {
     if (!currentLetter || !canvasRef.current) return;
 
@@ -132,18 +152,19 @@ export const WritingGame: React.FC<WritingGameProps> = ({ onBack, settings, onEa
         targetDesc = practiceMode === 'to_handwriting' ? 'Hebrew handwritten cursive' : 'Hebrew standard printed';
     } else {
         // English logic
-        targetDesc = `English letter "${currentLetter.char}"`;
+        const isUpper = targetChar === targetChar.toUpperCase();
+        targetDesc = `English ${isUpper ? 'capital' : 'lowercase'} letter "${targetChar}"`;
     }
     
     const promptSuffix = ` in ${targetDesc} style. Please be lenient for a child.`;
 
     try {
-      const result = await evaluateHandwriting(dataUrl, currentLetter.char + promptSuffix);
+      const result = await evaluateHandwriting(dataUrl, targetChar + promptSuffix);
       
       if (result.isCorrect) {
         setIsSuccess(true);
-        setScore(s => s + 3); // Changed from 10 to 3
-        if (onEarnPoints) onEarnPoints(3); // Changed from 10 to 3
+        setScore(s => s + 3); 
+        if (onEarnPoints) onEarnPoints(3); 
         playTextToSpeech("Excellent!");
         setFeedback(result.feedback);
         setTimeout(() => {
@@ -200,38 +221,26 @@ export const WritingGame: React.FC<WritingGameProps> = ({ onBack, settings, onEa
             </button>
         </div>
 
-        {/* English Case Toggle (Only shown if English) */}
-        {language === 'english' && (
-            <div className="flex bg-white/90 backdrop-blur shadow-md rounded-xl border-2 border-blue-200 overflow-hidden">
-                <button 
-                    onClick={() => setEnglishCase('upper')}
-                    className={`flex-1 py-1 text-sm font-bold ${englishCase === 'upper' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-blue-50'}`}
-                >
-                    Capital (A)
-                </button>
-                <button 
-                    onClick={() => setEnglishCase('lower')}
-                    className={`flex-1 py-1 text-sm font-bold ${englishCase === 'lower' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-blue-50'}`}
-                >
-                    Small (a)
-                </button>
-            </div>
-        )}
-
         {/* Mode Toggle (Print <-> Handwriting) */}
         <button 
           onClick={toggleMode}
           className="w-full bg-white/80 backdrop-blur shadow-md rounded-xl p-1 md:p-2 flex items-center justify-between border-2 border-purple-200"
         >
           <span className={`flex-1 text-center py-1 rounded-lg text-xs md:text-sm font-bold transition-colors ${practiceMode === 'to_handwriting' ? 'bg-purple-500 text-white' : 'text-gray-500'}`}>
-            {language === 'hebrew' ? 'דפוס ➜ כתב יד' : 'Print ➜ Cursive'}
+            {language === 'hebrew' 
+                ? `דפוס ${arrowIcon} כתב יד` 
+                : `Capital ${arrowIcon} Lower`
+            }
           </span>
-          {/* Arrow Direction logic */}
-          <span className="text-purple-300 px-2 text-lg">
-             {language === 'hebrew' ? '←' : '➜'}
+          {/* Arrow Icon in Center */}
+          <span className="text-purple-300 px-2 text-lg font-bold">
+             {arrowIcon}
           </span>
           <span className={`flex-1 text-center py-1 rounded-lg text-xs md:text-sm font-bold transition-colors ${practiceMode === 'to_print' ? 'bg-purple-500 text-white' : 'text-gray-500'}`}>
-            {language === 'hebrew' ? 'כתב יד ➜ דפוס' : 'Cursive ➜ Print'}
+            {language === 'hebrew' 
+                ? `כתב יד ${arrowIcon} דפוס` 
+                : `Lower ${arrowIcon} Capital`
+            }
           </span>
         </button>
       </div>
@@ -240,48 +249,64 @@ export const WritingGame: React.FC<WritingGameProps> = ({ onBack, settings, onEa
       <h1 className="text-xl md:text-2xl font-black text-purple-600 mt-40 md:mt-48 mb-1 font-dynamic text-center shrink-0 z-10 relative">
         {language === 'hebrew' 
             ? (practiceMode === 'to_handwriting' ? 'כיתבו בכתב יד' : 'כיתבו בכתב דפוס')
-            : (practiceMode === 'to_handwriting' ? 'Write in Cursive' : 'Write in Print')
+            : (practiceMode === 'to_handwriting' ? 'Write in Lowercase' : 'Write in Capital')
         }
       </h1>
       
       <div className="flex gap-4 md:gap-8 items-center justify-center mb-1 shrink-0">
+          {/* SOURCE BOX */}
           <div className="flex flex-col items-center">
               <div className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-2xl shadow border-2 border-purple-100 flex items-center justify-center">
+                {/* Logic: If mode is to_handwriting, Source is Print (Hebrew) or Capital (English) */}
                 {practiceMode === 'to_handwriting' ? (
-                  <span className="text-5xl md:text-6xl font-print">{currentLetter.char}</span>
+                  <span className="text-5xl md:text-6xl font-print">{sourceChar}</span>
                 ) : (
-                  language === 'hebrew' ? (
-                      <HandwrittenLetter char={currentLetter.char} className="text-5xl md:text-6xl" fontStyle={handwrittenFontStyle} />
+                  // Mode is to_print, Source is Handwriting (Hebrew) or Lowercase (English)
+                  isEnglish ? (
+                      <HandwrittenLetter char={sourceChar} className="text-5xl md:text-6xl" fontStyle="playpen" />
                   ) : (
-                      <span className="text-5xl md:text-6xl font-hand text-gray-800">{currentLetter.char}</span>
+                      <HandwrittenLetter char={sourceChar} className="text-5xl md:text-6xl" fontStyle={handwrittenFontStyle} />
                   )
                 )}
               </div>
               <span className="text-xs text-gray-400 uppercase font-bold mt-1">
-                {practiceMode === 'to_handwriting' ? 'Print' : 'Cursive'}
+                {practiceMode === 'to_handwriting' 
+                    ? (isEnglish ? 'Capital' : 'Print') 
+                    : (isEnglish ? 'Lower' : 'Cursive')
+                }
               </span>
           </div>
 
-          <div className="text-4xl text-gray-300">{language === 'hebrew' ? '←' : '➜'}</div>
+          <div className="text-4xl text-gray-300 font-bold">{arrowIcon}</div>
 
+          {/* TARGET GUIDE BOX (Preview) */}
           <div className="flex flex-col items-center relative">
               <div className={`w-16 h-16 md:w-20 md:h-20 flex items-center justify-center transition-opacity duration-300 ${showGuide ? 'opacity-100' : 'opacity-0 blur-sm'}`}>
                  {practiceMode === 'to_handwriting' ? (
-                    language === 'hebrew' ? (
+                    // Mode to_handwriting: Target is Hand (Hebrew) or Lower (English)
+                    isEnglish ? (
                         <HandwrittenLetter 
-                          char={currentLetter.char} 
-                          fontStyle={handwrittenFontStyle}
+                          char={targetChar} 
+                          fontStyle="playpen"
                           className="text-purple-600 text-5xl md:text-6xl"
                         />
                     ) : (
-                        <span className="text-5xl md:text-6xl font-hand text-purple-600">{currentLetter.char}</span>
+                        <HandwrittenLetter 
+                          char={targetChar} 
+                          fontStyle={handwrittenFontStyle}
+                          className="text-purple-600 text-5xl md:text-6xl"
+                        />
                     )
                  ) : (
-                    <span className="text-5xl md:text-6xl font-print text-purple-600">{currentLetter.char}</span>
+                    // Mode to_print: Target is Print (Hebrew) or Capital (English)
+                    <span className="text-5xl md:text-6xl font-print text-purple-600">{targetChar}</span>
                  )}
               </div>
               <span className="text-xs text-gray-400 uppercase font-bold mt-1">
-                {practiceMode === 'to_handwriting' ? 'Cursive' : 'Print'}
+                {practiceMode === 'to_handwriting' 
+                    ? (isEnglish ? 'Lower' : 'Cursive') 
+                    : (isEnglish ? 'Capital' : 'Print')
+                }
               </span>
               <button 
                 onClick={() => setShowGuide(!showGuide)}
@@ -304,18 +329,23 @@ export const WritingGame: React.FC<WritingGameProps> = ({ onBack, settings, onEa
          {showGuide && (
              <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
                 {practiceMode === 'to_handwriting' ? (
-                   language === 'hebrew' ? (
+                   isEnglish ? (
                        <HandwrittenLetter 
-                         char={currentLetter.char} 
+                         char={targetChar} 
                          className="text-black text-8xl md:text-9xl" 
-                         fontStyle={handwrittenFontStyle}
-                         showDirection={true} // Enable arrows
+                         fontStyle="playpen"
+                         showDirection={true}
                        />
                    ) : (
-                       <span className="text-8xl md:text-9xl font-hand text-black">{currentLetter.char}</span>
+                       <HandwrittenLetter 
+                         char={targetChar} 
+                         className="text-black text-8xl md:text-9xl" 
+                         fontStyle={handwrittenFontStyle}
+                         showDirection={true}
+                       />
                    )
                 ) : (
-                   <span className="text-8xl md:text-9xl font-print text-black">{currentLetter.char}</span>
+                   <span className="text-8xl md:text-9xl font-print text-black">{targetChar}</span>
                 )}
              </div>
          )}

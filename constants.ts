@@ -1,5 +1,5 @@
 
-import { LevelNode, VowelType, HebrewLetter, GameQuestion, RhymeQuestion, GuriReward, PetProfile } from './types';
+import { LevelNode, VowelType, HebrewLetter, GameQuestion, RhymeQuestion, GuriReward, PetProfile, ReadingQuestion } from './types';
 
 // ... existing LEVEL_NODES ...
 export const LEVEL_NODES: LevelNode[] = [
@@ -221,6 +221,58 @@ export const FALLBACK_RHYMES: RhymeQuestion[] = [
     { id: 'fr1', targetWord: 'חַלּוֹן', rhymeWord: 'בַּלּוֹן', distractors: ['שֻׁלְחָן', 'כִּסֵּא', 'בַּיִת'], hint: 'Window' },
     // ... existing rhymes
     { id: 'fr35', targetWord: 'שׁוּעָל', rhymeWord: 'מַעְגָּל', distractors: ['זְאֵב', 'רִבּוּעַ', 'מְשֻׁלָּשׁ'], hint: 'Fox' }
+];
+
+export const FALLBACK_READING_QUESTIONS: ReadingQuestion[] = [
+    {
+      id: 'read-1',
+      passage: 'דָּנִי הָלַךְ לַגַּן. הוּא רָאָה פַּרְפַּר כָּחֹל. הַפַּרְפַּר עָף לַפֶּרַח הָאָדֹם.',
+      question: 'לְאָן עָף הַפַּרְפַּר?',
+      options: ['לַפֶּרַח הָאָדֹם', 'לַעֵץ הַגָּבוֹהַ', 'לַבַּיִת שֶׁל דָּנִי', 'לַשָּׁמַיִם'],
+      correctAnswer: 'לַפֶּרַח הָאָדֹם'
+    },
+    {
+      id: 'read-2',
+      passage: 'רִינָה אוֹהֶבֶת תַּפּוּחִים. הִיא אָכְלָה תַּפּוּחַ יָרֹק וְטָעִים. אִמָּא שָׂמְחָה מְאוֹד.',
+      question: 'מָה אָכְלָה רִינָה?',
+      options: ['תַּפּוּחַ', 'בָּנָנָה', 'עוּגָה', 'גְּלִידָה'],
+      correctAnswer: 'תַּפּוּחַ'
+    },
+    {
+      id: 'read-3',
+      passage: 'הַכֶּלֶב רָץ בַּחָצֵר. הוּא מָצָא עֶצֶם גְּדוֹלָה. הַכֶּלֶב כִּשְׁכֵּשׁ בַּזָּנָב.',
+      question: 'מָה מָצָא הַכֶּלֶב?',
+      options: ['עֶצֶם', 'כַּדּוּר', 'חָתוּל', 'מַיִם'],
+      correctAnswer: 'עֶצֶם'
+    },
+    {
+      id: 'read-4',
+      passage: 'יוֹסִי בָּנָה אַרְמוֹן בַּחוֹל. הַגַּלִּים הִגִּיעוּ וְהָרְסוּ אֶת הָאַרְמוֹן. יוֹסִי בָּנָה חָדָשׁ.',
+      question: 'מָה בָּנָה יוֹסִי?',
+      options: ['אַרְמוֹן בַּחוֹל', 'בַּיִת', 'סְפִינָה', 'גֶּשֶׁר'],
+      correctAnswer: 'אַרְמוֹן בַּחוֹל'
+    },
+    {
+      id: 'read-5',
+      passage: 'הַשֶּׁמֶשׁ זָרְחָה בַּבֹּקֶר. הַצִּפּוֹרִים צִיְּצוּ עַל הָעֵץ. דָּנָה קָמָה לְבֵית הַסֵּפֶר.',
+      question: 'מָתַי זָרְחָה הַשֶּׁמֶשׁ?',
+      options: ['בַּבֹּקֶר', 'בַּלַּיְלָה', 'בַּצָּהֳרַיִם', 'בָּעֶרֶב'],
+      correctAnswer: 'בַּבֹּקֶר'
+    },
+    {
+      id: 'read-6',
+      passage: 'תָּמָר קִבְּלָה בֻּבָּה חֲדָשָׁה. הַבֻּבָּה לוֹבֶשֶׁת שִׂמְלָה וְרֻדָּה. תָּמָר קָרְאָה לַבֻּבָּה מִיכָל.',
+      question: 'מָה צֶבַע הַשִּׂמְלָה שֶׁל הַבֻּבָּה?',
+      options: ['וָרֹד', 'כָּחֹל', 'יָרֹק', 'אָדֹם'],
+      correctAnswer: 'וָרֹד'
+    },
+    {
+      id: 'read-7',
+      passage: 'גִּיל נָסַע בָּאוֹפַנַּיִם לַפָּארְק. הוּא פָּגַשׁ שָׁם אֶת הֶחָבֵר שֶׁלּוֹ דָּוִד. הֵם שִׂחֲקוּ יַחַד.',
+      question: 'אֵיךְ נָסַע גִּיל לַפָּארְק?',
+      options: ['בְּאוֹפַנַּיִם', 'בְּאוֹטוֹבּוּס', 'בְּרֶגֶל', 'בְּמְכוֹנִית'],
+      correctAnswer: 'בְּאוֹפַנַּיִם'
+    }
 ];
 
 export const FALLBACK_TWISTERS = [
