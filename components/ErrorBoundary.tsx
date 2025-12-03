@@ -10,19 +10,23 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-  };
+  // FIX: Switched to constructor for state initialization to support older environments
+  // that may not handle class field initializers, which can cause type errors.
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
-  public static getDerivedStateFromError(_: Error): State {
+  static getDerivedStateFromError(_: Error): State {
+    // Update state so the next render will show the fallback UI.
     return { hasError: true };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
-  public render() {
+  render() {
     if (this.state.hasError) {
       return (
         <div className="h-full w-full flex flex-col items-center justify-center bg-red-50 p-4 text-center">
@@ -35,6 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
             color="red" 
             size="lg"
             onClick={() => {
+              // Clear any potentially corrupted state and reload
               localStorage.clear();
               window.location.reload();
             }}

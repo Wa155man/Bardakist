@@ -1,45 +1,68 @@
 const CACHE_NAME = 'zoharon-v1';
 const DYNAMIC_CACHE_NAME = 'zoharon-dynamic-v1';
 
-const STATIC_ASSETS = [ '/', '/index.html', '/index.tsx', 'https://cdn.tailwindcss.com' ];
+// Assets to pre-cache (using '/' for the root for robustness)
+const STATIC_ASSETS = [
+  '/', // Represents the root path, i.e., index.html
+  'index.html',
+  'index.tsx',
+  'https://cdn.tailwindcss.com',
+];
 
+// Install Event
 self.addEventListener('install', (event) => {
-  event.waitUntil( caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)) );
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('Pre-caching static assets');
+      return cache.addAll(STATIC_ASSETS);
+    }).catch(err => {
+        console.error('Failed to pre-cache assets:', err);
+    })
+  );
   self.skipWaiting();
 });
 
+// Activate Event
 self.addEventListener('activate', (event) => {
-  event.waitUntil( caches.keys().then((keys) => Promise.all( keys.map((key) => { if (key !== CACHE_NAME && key !== DYNAMIC_CACHE_NAME) return caches.delete(key); }) )) );
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME && key !== DYNAMIC_CACHE_NAME)
+          .map((key) => caches.delete(key))
+      );
+    })
+  );
   self.clients.claim();
 });
 
+// Fetch Event
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+    // Strategy: Cache, falling back to network.
+    // This is robust for offline use.
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            // If the resource is in the cache, return it.
+            if (cachedResponse) {
+                return cachedResponse;
+            }
 
-  if (url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com') {
-    event.respondWith( caches.open(DYNAMIC_CACHE_NAME).then((cache) => cache.match(event.request).then((response) => response || fetch(event.request).then((fetchRes) => { cache.put(event.request, fetchRes.clone()); return fetchRes; }) )) );
-    return;
-  }
-
-  if (url.hostname === 'image.pollinations.ai') {
-    event.respondWith( caches.open(DYNAMIC_CACHE_NAME).then((cache) => cache.match(event.request).then((response) => {
-        if (response) return response;
-        return fetch(event.request).then((fetchRes) => {
-            if (fetchRes.status === 200) cache.put(event.request, fetchRes.clone());
-            return fetchRes;
-        }).catch(() => new Response('', { status: 404 }));
-    })) );
-    return;
-  }
-
-  event.respondWith( caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (event.request.method === 'GET' && networkResponse.status === 200) {
-            caches.open(DYNAMIC_CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
-        }
-        return networkResponse;
-      }).catch(() => {});
-      return cachedResponse || fetchPromise;
-    })
-  );
+            // If it's not in the cache, fetch it from the network.
+            return fetch(event.request).then((networkResponse) => {
+                // For valid GET requests, cache the new response for future offline use.
+                if (event.request.method === 'GET' && networkResponse.status === 200) {
+                    const responseToCache = networkResponse.clone();
+                    caches.open(DYNAMIC_CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseToCache);
+                    });
+                }
+                return networkResponse;
+            }).catch(error => {
+                console.warn('Network request failed for:', event.request.url);
+                // When offline, if a resource is not in cache, the fetch will fail.
+                // The browser will show the default network error page, which is expected.
+                throw error;
+            });
+        })
+    );
 });

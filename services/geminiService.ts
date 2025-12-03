@@ -1,5 +1,4 @@
-// FIX: Import Modality from @google/genai.
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { GameQuestion, VowelType, SentenceQuestion, RhymeQuestion, ReadingQuestion } from "../types";
 import { VOWEL_SPECIFIC_FALLBACKS, FALLBACK_TWISTERS, FALLBACK_SENTENCES, FALLBACK_SENTENCES_ENGLISH, FALLBACK_RHYMES, FALLBACK_HANGMAN_WORDS, FALLBACK_HANGMAN_WORDS_ENGLISH } from "../constants";
 
@@ -10,16 +9,16 @@ const initializeGenAI = () => {
       return null;
   }
 
-  // Safely access environment variables to prevent startup crash on static hosts
+  // Safely access environment variables to prevent startup crash
   let apiKey = '';
   try {
-      // @ts-ignore
+      // @ts-ignore - This is a common pattern for accessing env vars in different environments
       if (typeof process !== 'undefined' && process.env) {
           // @ts-ignore
           apiKey = process.env.API_KEY;
       }
   } catch (e) {
-      // process is not defined, which is expected on client-side bundles
+      // process is not defined
   }
   
   if (!apiKey) {
@@ -130,7 +129,7 @@ const getTTSAudioBuffer = async (text: string): Promise<AudioBuffer | null> => {
           model: "gemini-2.5-flash-preview-tts",
           contents: [{ parts: [{ text: text }] }],
           config: {
-            responseModalities: [Modality.AUDIO], 
+            responseModalities: ["AUDIO"], 
             speechConfig: {
               voiceConfig: {
                 prebuiltVoiceConfig: { voiceName: 'Aoede' },

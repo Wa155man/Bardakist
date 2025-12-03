@@ -34,7 +34,8 @@ export const App: React.FC = () => {
   const [sentenceQuestions, setSentenceQuestions] = useState<SentenceQuestion[]>([]);
   const [hangmanWords, setHangmanWords] = useState<{word: string, hint: string, hebrewHint: string, imagePrompt: string}[]>([]);
   const [hangmanHistory, setHangmanHistory] = useState<Set<string>>(() => {
-      try { const saved = localStorage.getItem('hangmanHistory'); return saved ? new Set(JSON.parse(saved)) : new Set(); } catch (e) { return new Set(); }
+// FIX: Cast result of JSON.parse to string[] to ensure correct type for Set.
+      try { const saved = localStorage.getItem('hangmanHistory'); return saved ? new Set(JSON.parse(saved) as string[]) : new Set(); } catch (e) { return new Set(); }
   });
 
   useEffect(() => { localStorage.setItem('hangmanHistory', JSON.stringify(Array.from(hangmanHistory))); }, [hangmanHistory]);
@@ -50,7 +51,8 @@ export const App: React.FC = () => {
   const [currentReward, setCurrentReward] = useState<GuriReward | null>(null);
 
   const [sentenceHistory, setSentenceHistory] = useState<Set<string>>(() => {
-      try { const saved = localStorage.getItem('sentenceHistory'); return saved ? new Set(JSON.parse(saved)) : new Set(); } catch (e) { return new Set(); }
+// FIX: Cast result of JSON.parse to string[] to ensure correct type for Set.
+      try { const saved = localStorage.getItem('sentenceHistory'); return saved ? new Set(JSON.parse(saved) as string[]) : new Set(); } catch (e) { return new Set(); }
   });
 
   useEffect(() => { localStorage.setItem('sentenceHistory', JSON.stringify(Array.from(sentenceHistory))); }, [sentenceHistory]);
@@ -159,8 +161,7 @@ export const App: React.FC = () => {
     setIsLoading(true);
     setScreen(ScreenState.GAME_SESSION); 
     try {
-      const currentWords = questions.map(q => q.word);
-      const generatedQuestions = await generateLevelContent(level.vowel, currentWords);
+      const generatedQuestions = await generateLevelContent(level.vowel);
       setQuestions(generatedQuestions);
       setNextQuestion(generatedQuestions.length > 1 ? generatedQuestions[1] : undefined);
       setCurrentQuestionIndex(0);
@@ -197,7 +198,8 @@ export const App: React.FC = () => {
       setIsLoading(true);
       setSnowmanLanguage(language);
       try {
-          const historyArray = Array.from(sentenceHistory);
+// FIX: Explicitly type historyArray as string[] to avoid type errors.
+          const historyArray: string[] = Array.from(sentenceHistory);
           const data = await generateSentenceQuestions(language, historyArray);
           const newHistory = new Set(sentenceHistory);
           data.forEach(q => newHistory.add(q.fullSentence));
@@ -208,7 +210,8 @@ export const App: React.FC = () => {
 
   const handleLoadMoreSentences = async (language: 'hebrew' | 'english') => {
     try {
-      const historyArray = Array.from(sentenceHistory);
+// FIX: Explicitly type historyArray as string[] to avoid type errors.
+      const historyArray: string[] = Array.from(sentenceHistory);
       const newQuestions = await generateSentenceQuestions(language, historyArray);
       const newHistory = new Set(sentenceHistory);
       newQuestions.forEach(q => newHistory.add(q.fullSentence));
@@ -221,7 +224,8 @@ export const App: React.FC = () => {
 
   const handleLoadMoreHangman = async (language: 'hebrew' | 'english') => {
       try {
-          const currentHistory = Array.from(hangmanHistory);
+// FIX: Explicitly type currentHistory as string[] to avoid type errors.
+          const currentHistory: string[] = Array.from(hangmanHistory);
           const newWords = await generateHangmanWords(language, currentHistory);
           const newHistory = new Set(hangmanHistory);
           newWords.forEach(w => newHistory.add(w.word));
@@ -235,7 +239,8 @@ export const App: React.FC = () => {
     if (isLoadingRhymes) return;
     setIsLoadingRhymes(true);
     try {
-        const history = Array.from(rhymeHistory);
+// FIX: Explicitly type history as string[] to avoid type errors.
+        const history: string[] = Array.from(rhymeHistory);
         const newQuestions = await generateRhymeQuestions(history);
         const newHistory = new Set(rhymeHistory);
         newQuestions.forEach(q => newHistory.add(q.targetWord));
@@ -244,6 +249,7 @@ export const App: React.FC = () => {
     } catch (e) { console.error(e); } finally { setIsLoadingRhymes(false); }
   };
 
+  // FIX: Added async keyword to handle await expressions inside the function.
   const handleMiniPracticeSelect = async (optionId: string) => {
     const tutorials: Record<string, TutorialStep[]> = {
       matching: [{ message: "התאימו בין אות בכתב יד לאות בדפוס." }],
@@ -280,7 +286,8 @@ export const App: React.FC = () => {
         setIsLoading(true);
         try {
           if (optionId === 'hangman') {
-            const history = Array.from(hangmanHistory);
+// FIX: Explicitly type history as string[] to avoid type errors.
+            const history: string[] = Array.from(hangmanHistory);
             const words = await generateHangmanWords('hebrew', history);
             setHangmanWords(words);
             const newHistory = new Set(hangmanHistory);
@@ -288,7 +295,8 @@ export const App: React.FC = () => {
             setHangmanHistory(newHistory);
             words.forEach(w => { new Image().src = getHangmanImageUrl(w.hint); });
           } else if (optionId === 'rhymes') {
-            const history = Array.from(rhymeHistory);
+// FIX: Explicitly type history as string[] to avoid type errors.
+            const history: string[] = Array.from(rhymeHistory);
             const data = await generateRhymeQuestions(history);
             setRhymeQuestions(data);
             setRhymeHistory(new Set(data.map(q=>q.targetWord)));
@@ -369,8 +377,6 @@ export const App: React.FC = () => {
 
       {screen === ScreenState.GAME_SESSION && currentLevel && questions[currentQuestionIndex] && (
         <div className="h-full w-full bg-indigo-50 pt-14 md:pt-20 relative overflow-hidden flex flex-col">
-           <div className="absolute -left-10 top-20 w-40 h-40 bg-yellow-300 rounded-full opacity-50 mix-blend-multiply filter blur-xl animate-blob"></div>
-           <div className="absolute -right-10 top-40 w-40 h-40 bg-purple-300 rounded-full opacity-50 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
            <div className="container mx-auto px-4 relative z-10 flex-1 flex flex-col">
              <div className="text-center mb-1 md:mb-2 shrink-0">
                <h1 className="text-xl md:text-2xl font-bold text-gray-700">{currentLevel.name}</h1>

@@ -119,12 +119,17 @@
 }
 </script>
   <!-- Register Service Worker -->
-  <script>
+  <script type="module">
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('Service Worker registered', reg))
-          .catch(err => console.log('Service Worker registration failed', err));
+        // The sandbox environment is causing origin resolution issues.
+        // Using window.location.origin is the most direct way to ensure
+        // the service worker URL is constructed with the correct origin,
+        // preventing the Same-Origin Policy error.
+        const swUrl = `${window.location.origin}/sw.js`;
+        navigator.serviceWorker.register(swUrl)
+          .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+          .catch(err => console.error('Service Worker registration failed:', err));
       });
     }
   </script>
