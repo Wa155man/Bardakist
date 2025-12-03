@@ -1,7 +1,8 @@
+
 {
-  "name": "Zoharon - Hebrew Learning",
-  "short_name": "Zoharon",
-  "start_url": "/",
+  "name": "Bardakist - Hebrew Learning",
+  "short_name": "Bardakist",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#1e293b",
   "theme_color": "#fcd34d",

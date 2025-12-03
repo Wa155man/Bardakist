@@ -275,6 +275,44 @@ export const FALLBACK_READING_QUESTIONS: ReadingQuestion[] = [
     }
 ];
 
+export const FALLBACK_READING_QUESTIONS_ENGLISH: ReadingQuestion[] = [
+    {
+      id: 'read-en-1',
+      passage: 'The cat sat on the mat. The cat is fat and happy. It likes to sleep.',
+      question: 'Where did the cat sit?',
+      options: ['On the mat', 'On the chair', 'On the bed', 'In the box'],
+      correctAnswer: 'On the mat'
+    },
+    {
+      id: 'read-en-2',
+      passage: 'Tom has a red ball. He plays with the ball in the park. His dog runs after the ball.',
+      question: 'What color is the ball?',
+      options: ['Red', 'Blue', 'Green', 'Yellow'],
+      correctAnswer: 'Red'
+    },
+    {
+      id: 'read-en-3',
+      passage: 'Sara loves apples. She eats a green apple every day. Apples are good for you.',
+      question: 'What does Sara eat?',
+      options: ['A green apple', 'A banana', 'A cookie', 'A pizza'],
+      correctAnswer: 'A green apple'
+    },
+    {
+      id: 'read-en-4',
+      passage: 'The sun is hot. We go to the beach to swim. The water is cool and blue.',
+      question: 'Where do we go to swim?',
+      options: ['To the beach', 'To school', 'To the store', 'To the moon'],
+      correctAnswer: 'To the beach'
+    },
+    {
+      id: 'read-en-5',
+      passage: 'My car is blue. It goes very fast. I drive it to work every morning.',
+      question: 'When do I drive to work?',
+      options: ['Every morning', 'At night', 'On Sunday', 'Never'],
+      correctAnswer: 'Every morning'
+    }
+];
+
 export const FALLBACK_TWISTERS = [
   { hebrew: 'שָׂרָה שָׁרָה שִׁיר שָׂמֵחַ', english: 'Sarah sang a happy song' },
   { hebrew: 'בַּקְבּוּק בְּלִי פְּקָק', english: 'A bottle without a cap' }

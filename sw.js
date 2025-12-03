@@ -1,11 +1,12 @@
-const CACHE_NAME = 'zoharon-v1';
-const DYNAMIC_CACHE_NAME = 'zoharon-dynamic-v1';
 
-// Assets to pre-cache (using '/' for the root for robustness)
+const CACHE_NAME = 'bardakist-v1';
+const DYNAMIC_CACHE_NAME = 'bardakist-dynamic-v1';
+
+// Assets to pre-cache (using relative paths for robustness)
 const STATIC_ASSETS = [
-  '/', // Represents the root path, i.e., index.html
-  'index.html',
-  'index.tsx',
+  './', 
+  './index.html',
+  './index.tsx',
   'https://cdn.tailwindcss.com',
 ];
 

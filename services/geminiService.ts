@@ -1,7 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { GameQuestion, VowelType, SentenceQuestion, RhymeQuestion, ReadingQuestion } from "../types";
-import { VOWEL_SPECIFIC_FALLBACKS, FALLBACK_TWISTERS, FALLBACK_SENTENCES, FALLBACK_SENTENCES_ENGLISH, FALLBACK_RHYMES, FALLBACK_HANGMAN_WORDS, FALLBACK_HANGMAN_WORDS_ENGLISH, FALLBACK_READING_QUESTIONS } from "../constants";
+import { VOWEL_SPECIFIC_FALLBACKS, FALLBACK_TWISTERS, FALLBACK_SENTENCES, FALLBACK_SENTENCES_ENGLISH, FALLBACK_RHYMES, FALLBACK_HANGMAN_WORDS, FALLBACK_HANGMAN_WORDS_ENGLISH, FALLBACK_READING_QUESTIONS, FALLBACK_READING_QUESTIONS_ENGLISH } from "../constants";
 
 const initializeGenAI = () => {
   // Safe check for offline mode
@@ -278,12 +278,15 @@ export const generateRhymeQuestions = async (excludeWords: string[] = []): Promi
     return getFallback();
 };
 
-export const generateReadingQuestions = async (excludeIds: string[] = []): Promise<ReadingQuestion[]> => {
+export const generateReadingQuestions = async (excludeIds: string[] = [], language: 'hebrew' | 'english' = 'hebrew'): Promise<ReadingQuestion[]> => {
+    // Select source based on language
+    const sourceList = language === 'english' ? FALLBACK_READING_QUESTIONS_ENGLISH : FALLBACK_READING_QUESTIONS;
+
     // Filter out previously seen questions
-    const available = FALLBACK_READING_QUESTIONS.filter(q => !excludeIds.includes(q.id));
+    const available = sourceList.filter(q => !excludeIds.includes(q.id));
     
     // If all used, recycle from full list to prevent empty state
-    const source = available.length > 0 ? available : FALLBACK_READING_QUESTIONS;
+    const source = available.length > 0 ? available : sourceList;
     
     // Pick one random story
     const random = source[Math.floor(Math.random() * source.length)];

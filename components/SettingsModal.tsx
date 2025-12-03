@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Button } from './Button';
 import { AppSettings, UserProgress, PetProfile } from '../types';
@@ -59,12 +60,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     
-    // Format: Zoharon_Progress_YYYY-MM-DD_HH-MM
+    // Format: Bardakist_Progress_YYYY-MM-DD_HH-MM
     const now = new Date();
     const dateStr = now.toISOString().slice(0,10);
     const timeStr = now.toTimeString().slice(0,5).replace(/:/g, '-');
     
-    downloadAnchorNode.setAttribute("download", "Zoharon_Progress_" + dateStr + "_" + timeStr + ".json");
+    downloadAnchorNode.setAttribute("download", "Bardakist_Progress_" + dateStr + "_" + timeStr + ".json");
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();

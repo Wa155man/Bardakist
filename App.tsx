@@ -21,7 +21,7 @@ import { RewardOverlay } from './components/RewardOverlay';
 import { PetSelection } from './components/PetSelection'; 
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ScreenState, LevelNode, UserProgress, GameQuestion, AppSettings, SentenceQuestion, RhymeQuestion, ReadingQuestion, GuriReward, PetProfile } from './types';
-import { generateLevelContent, generateSentenceQuestions, generateHangmanWords, generateRhymeQuestions, generateReadingQuestions, getMiniGameImageUrl, getHangmanImageUrl } from './services/geminiService';
+import { generateLevelContent, generateSentenceQuestions, generateHangmanWords, generateRhymeQuestions, generateReadingQuestions, getMiniGameImageUrl, getHangmanImageUrl, resumeAudioContext } from './services/geminiService';
 import { LEVEL_NODES, GURI_REWARDS, PETS } from './constants';
 
 export const App: React.FC = () => {
@@ -54,6 +54,26 @@ export const App: React.FC = () => {
 // FIX: Cast result of JSON.parse to string[] to ensure correct type for Set.
       try { const saved = localStorage.getItem('sentenceHistory'); return saved ? new Set(JSON.parse(saved) as string[]) : new Set(); } catch (e) { return new Set(); }
   });
+
+  // UNLOCK AUDIO CONTEXT ON FIRST INTERACTION
+  useEffect(() => {
+    const unlockAudio = () => {
+      resumeAudioContext();
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
+
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, []);
 
   useEffect(() => { localStorage.setItem('sentenceHistory', JSON.stringify(Array.from(sentenceHistory))); }, [sentenceHistory]);
 
@@ -301,19 +321,26 @@ export const App: React.FC = () => {
             setRhymeQuestions(data);
             setRhymeHistory(new Set(data.map(q=>q.targetWord)));
           } else if (optionId === 'reading') {
-            setReadingQuestions(await generateReadingQuestions([])); // Initialize with new unique questions
+            setReadingQuestions(await generateReadingQuestions([], 'hebrew')); // Initialize with Hebrew
           }
         } catch (e) { console.error(e); } finally { setIsLoading(false); }
       }
     }
   };
   
-  const handleLoadMoreReading = async () => {
+  const handleReadingGameAction = async (action: 'more' | 'restart', language: 'hebrew' | 'english' = 'hebrew') => {
     try { 
-      const currentIds = readingQuestions.map(q => q.id);
-      const moreQuestions = await generateReadingQuestions(currentIds);
-      setReadingQuestions(prev => [...prev, ...moreQuestions]); 
-    } catch (e) { console.error(e); }
+      if (action === 'restart') {
+          setIsLoading(true);
+          const newQs = await generateReadingQuestions([], language);
+          setReadingQuestions(newQs);
+          setIsLoading(false);
+      } else {
+          const currentIds = readingQuestions.map(q => q.id);
+          const moreQuestions = await generateReadingQuestions(currentIds, language);
+          setReadingQuestions(prev => [...prev, ...moreQuestions]); 
+      }
+    } catch (e) { console.error(e); setIsLoading(false); }
   };
   
   const handleOpenTongueTwisters = () => { setScreen(ScreenState.TONGUE_TWISTERS); };
@@ -354,7 +381,7 @@ export const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-    <div className="relative w-[95vw] h-[95vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden border-[8px] border-slate-800 ring-4 ring-slate-900/50 select-none flex flex-col">
+    <div className="relative w-[95vw] h-[95dvh] max-h-[100dvh] bg-white rounded-[2rem] shadow-2xl overflow-hidden border-[8px] border-slate-800 ring-4 ring-slate-900/50 select-none flex flex-col mx-auto my-auto">
       {showTopBar && <TopBar progress={userProgress} onHome={handleBackToMap} onOpenSettings={() => setIsSettingsOpen(true)} />}
       
       {screen === ScreenState.PET_SELECTION && <PetSelection onSelect={handlePetSelection} />}
@@ -368,7 +395,7 @@ export const App: React.FC = () => {
       {screen === ScreenState.DICTATION_GAME && <DictationGame onBack={handleBackToMiniPractice} onEarnPoints={handleEarnPoints} />}
       {screen === ScreenState.HANGMAN_GAME && !isLoading && <HangmanGame words={hangmanWords} onBack={handleBackToMiniPractice} onLoadMore={handleLoadMoreHangman} onEarnPoints={handleEarnPoints} />}
       {screen === ScreenState.RHYME_GAME && !isLoading && <RhymeGame questions={rhymeQuestions} onBack={handleBackToMiniPractice} onLoadMore={handleLoadMoreRhymes} onEarnPoints={handleEarnPoints} />}
-      {screen === ScreenState.READING_GAME && !isLoading && <ReadingGame questions={readingQuestions} onBack={handleBackToMiniPractice} onLoadMore={handleLoadMoreReading} onEarnPoints={handleEarnPoints} />}
+      {screen === ScreenState.READING_GAME && !isLoading && <ReadingGame questions={readingQuestions} onBack={handleBackToMiniPractice} onGameAction={handleReadingGameAction} onEarnPoints={handleEarnPoints} />}
       {screen === ScreenState.TONGUE_TWISTERS && <TongueTwisters onBack={handleBackToMap} />}
       {screen === ScreenState.SNOWMAN_GAME && !isLoading && <SnowmanGame questions={sentenceQuestions} onComplete={handleSnowmanComplete} onBack={() => { if (returnScreen === ScreenState.LEVEL_SELECT) { handleBackToMap(); } else { handleBackToMiniPractice(); } }} onLoadMore={handleLoadMoreSentences} onStartGame={handleSentenceGameStart} settings={settings} onEarnPoints={handleEarnPoints} language={snowmanLanguage} />}
 

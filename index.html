@@ -4,8 +4,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Zoharon - Hebrew Learning</title>
-    <link rel="manifest" href="/manifest.json">
+    <title>Bardakist - Hebrew Learning</title>
+    <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#fcd34d">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,7 +26,9 @@
       }
 
       html, body {
-        height: 100%;
+        height: 100%; /* Fallback */
+        height: 100dvh; /* Dynamic Viewport Height for Mobile Browsers */
+        width: 100%;
         margin: 0;
         overflow: hidden; /* Prevent body scroll, handle in container */
       }
@@ -133,6 +135,6 @@
 </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
