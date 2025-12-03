@@ -336,17 +336,18 @@ export const FALLBACK_HANGMAN_WORDS = [
     { word: 'בַּיִת', hint: 'House', hebrewHint: 'מקום עם קירות וגג שבו גרים אנשים ומשפחות', imagePrompt: 'house' }
 ];
 
+// UPDATED: Hint is now the Hebrew translation (not the answer itself), and hebrewHint is the description
 export const FALLBACK_HANGMAN_WORDS_ENGLISH = [
-    { word: 'WATER', hint: 'Water', hebrewHint: 'When you are thirsty, you drink me', imagePrompt: 'glass of water' },
-    { word: 'SUN', hint: 'Sun', hebrewHint: 'Big yellow ball in the sky', imagePrompt: 'sun' },
-    { word: 'BUTTERFLY', hint: 'Butterfly', hebrewHint: 'Small colorful flying insect', imagePrompt: 'butterfly' },
-    { word: 'BALL', hint: 'Ball', hebrewHint: 'Round object for playing', imagePrompt: 'ball' },
-    { word: 'HOUSE', hint: 'House', hebrewHint: 'A place where people live', imagePrompt: 'house' },
-    { word: 'APPLE', hint: 'Apple', hebrewHint: 'Red or green fruit', imagePrompt: 'apple' },
-    { word: 'CAT', hint: 'Cat', hebrewHint: 'Pet that says Meow', imagePrompt: 'cat' },
-    { word: 'DOG', hint: 'Dog', hebrewHint: 'Pet that barks', imagePrompt: 'dog' },
-    { word: 'FLOWER', hint: 'Flower', hebrewHint: 'Colorful plant in the garden', imagePrompt: 'flower' },
-    { word: 'BOOK', hint: 'Book', hebrewHint: 'Something you read', imagePrompt: 'book' }
+    { word: 'WATER', hint: 'מַיִם', hebrewHint: 'כשצמאים שותים אותי', imagePrompt: 'glass of water' },
+    { word: 'SUN', hint: 'שֶׁמֶשׁ', hebrewHint: 'כדור צהוב גדול בשמיים', imagePrompt: 'sun' },
+    { word: 'BUTTERFLY', hint: 'פַּרְפַּר', hebrewHint: 'חיה קטנה עם כנפיים צבעוניות', imagePrompt: 'butterfly' },
+    { word: 'BALL', hint: 'כַּדּוּר', hebrewHint: 'חפץ עגול למשחק', imagePrompt: 'ball' },
+    { word: 'HOUSE', hint: 'בַּיִת', hebrewHint: 'מקום בו אנשים גרים', imagePrompt: 'house' },
+    { word: 'APPLE', hint: 'תַּפּוּחַ', hebrewHint: 'פרי אדום או ירוק', imagePrompt: 'apple' },
+    { word: 'CAT', hint: 'חָתוּל', hebrewHint: 'חיה שאומרת מיאו', imagePrompt: 'cat' },
+    { word: 'DOG', hint: 'כֶּלֶב', hebrewHint: 'חיה שנובחת', imagePrompt: 'dog' },
+    { word: 'FLOWER', hint: 'פֶּרַח', hebrewHint: 'צמח צבעוני בגינה', imagePrompt: 'flower' },
+    { word: 'BOOK', hint: 'סֵפֶר', hebrewHint: 'משהו שקוראים בו', imagePrompt: 'book' }
 ];
 
 export const GURI_REWARDS: GuriReward[] = [

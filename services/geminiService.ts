@@ -188,10 +188,9 @@ const speakBrowser = (text: string) => {
 
 export const playTextToSpeech = async (text: string) => {
   if (!text) return;
-  // Increase threshold to 200 chars to ensure reading passages (usually 60-150 chars) play instantly via browser
-  const isShort = text.length < 200; 
   const ctx = getAudioContext();
   
+  // 1. Check Cache
   if (ctx && ttsCache.has(text)) {
       if (ctx.state === 'suspended') try { await ctx.resume(); } catch(e){}
       const buffer = ttsCache.get(text)!;
@@ -202,11 +201,22 @@ export const playTextToSpeech = async (text: string) => {
       return;
   }
 
-  if (isShort && 'speechSynthesis' in window) {
-      speakBrowser(text);
-      return;
+  // 2. Check Pending - Wait for prefetch to finish
+  if (ctx && pendingTTS.has(text)) {
+      try {
+          const buffer = await pendingTTS.get(text);
+          if (buffer) {
+            if (ctx.state === 'suspended') try { await ctx.resume(); } catch(e){}
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(ctx.destination);
+            source.start();
+            return;
+          }
+      } catch (e) { /* ignore */ }
   }
 
+  // 3. Try to fetch fresh (GenAI) - Prioritize quality/consistency over browser TTS unless failed
   if (ctx) {
       if (ctx.state === 'suspended') try { await ctx.resume(); } catch(e){}
       const buffer = await getTTSAudioBuffer(text);
@@ -218,7 +228,12 @@ export const playTextToSpeech = async (text: string) => {
         return;
       }
   }
-  speakBrowser(text);
+
+  // 4. Fallback to Browser
+  if ('speechSynthesis' in window) {
+      speakBrowser(text);
+      return;
+  }
 };
 
 // --- Image Helpers ---
@@ -271,9 +286,17 @@ export const generateHangmanWords = async (language: 'hebrew' | 'english' = 'heb
 
 export const generateRhymeQuestions = async (excludeWords: string[] = []): Promise<RhymeQuestion[]> => {
     const getFallback = () => {
-        const available = FALLBACK_RHYMES.filter(q => !excludeWords.includes(q.targetWord));
+        // Filter out recent words
+        let available = FALLBACK_RHYMES.filter(q => !excludeWords.includes(q.targetWord));
+        
+        // RECYCLE: If we ran out of unique rhymes, reset and use the full list again
+        if (available.length === 0) {
+            available = FALLBACK_RHYMES;
+        }
+
         const shuffled = [...available].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, 5).map((q, i) => ({ ...q, id: `fallback-rhyme-${Date.now()}-${i}` }));
+        // Append unique ID to ensure React handles them as new questions
+        return shuffled.slice(0, 5).map((q, i) => ({ ...q, id: `rhyme-${Date.now()}-${i}` }));
     };
     return getFallback();
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { LevelMap } from './components/LevelMap';
 import { TopBar } from './components/TopBar';
@@ -48,6 +49,7 @@ export const App: React.FC = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [snowmanLanguage, setSnowmanLanguage] = useState<'hebrew' | 'english'>('hebrew');
+  const [hangmanLanguage, setHangmanLanguage] = useState<'hebrew' | 'english'>('hebrew');
   const [currentReward, setCurrentReward] = useState<GuriReward | null>(null);
 
   const [sentenceHistory, setSentenceHistory] = useState<Set<string>>(() => {
@@ -242,6 +244,30 @@ export const App: React.FC = () => {
 
   const handleOpenMiniPractice = () => { setScreen(ScreenState.MINI_PRACTICE_SELECT); };
 
+  // New function to start hangman with specific language (resets list)
+  const handleStartHangman = async (language: 'hebrew' | 'english') => {
+      setIsLoading(true);
+      setHangmanLanguage(language);
+      try {
+          const newWords = await generateHangmanWords(language, []); // Start fresh ignoring history for simplicity on switch
+          setHangmanWords(newWords);
+          
+          const newHistory = new Set<string>(); // Reset history to avoid mixing languages
+          newWords.forEach(w => newHistory.add(w.word));
+          setHangmanHistory(newHistory);
+          
+          // Preload images
+          newWords.forEach(w => { 
+              const imgPrompt = w.imagePrompt || w.hint;
+              new Image().src = getHangmanImageUrl(imgPrompt); 
+          });
+      } catch (e) { 
+          console.error(e); 
+      } finally { 
+          setIsLoading(false); 
+      }
+  };
+
   const handleLoadMoreHangman = async (language: 'hebrew' | 'english') => {
       try {
 // FIX: Explicitly type currentHistory as string[] to avoid type errors.
@@ -250,7 +276,11 @@ export const App: React.FC = () => {
           const newHistory = new Set(hangmanHistory);
           newWords.forEach(w => newHistory.add(w.word));
           setHangmanHistory(newHistory);
-          newWords.forEach(w => { new Image().src = getHangmanImageUrl(w.hint); });
+          
+          newWords.forEach(w => { 
+              const imgPrompt = w.imagePrompt || w.hint;
+              new Image().src = getHangmanImageUrl(imgPrompt); 
+          });
           setHangmanWords(prev => [...prev, ...newWords]);
       } catch (e) { console.error(e); }
   };
@@ -306,14 +336,7 @@ export const App: React.FC = () => {
         setIsLoading(true);
         try {
           if (optionId === 'hangman') {
-// FIX: Explicitly type history as string[] to avoid type errors.
-            const history: string[] = Array.from(hangmanHistory);
-            const words = await generateHangmanWords('hebrew', history);
-            setHangmanWords(words);
-            const newHistory = new Set(hangmanHistory);
-            words.forEach(w => newHistory.add(w.word));
-            setHangmanHistory(newHistory);
-            words.forEach(w => { new Image().src = getHangmanImageUrl(w.hint); });
+            await handleStartHangman('hebrew'); // Start with Hebrew by default and reset list
           } else if (optionId === 'rhymes') {
 // FIX: Explicitly type history as string[] to avoid type errors.
             const history: string[] = Array.from(rhymeHistory);
@@ -393,7 +416,7 @@ export const App: React.FC = () => {
       {screen === ScreenState.WRITING_GAME && <WritingGame onBack={handleBackToMiniPractice} settings={settings} onEarnPoints={handleEarnPoints} />}
       {screen === ScreenState.MEMORY_GAME && <MemoryGame onBack={handleBackToMiniPractice} onEarnPoints={handleEarnPoints} />}
       {screen === ScreenState.DICTATION_GAME && <DictationGame onBack={handleBackToMiniPractice} onEarnPoints={handleEarnPoints} />}
-      {screen === ScreenState.HANGMAN_GAME && !isLoading && <HangmanGame words={hangmanWords} onBack={handleBackToMiniPractice} onLoadMore={handleLoadMoreHangman} onEarnPoints={handleEarnPoints} />}
+      {screen === ScreenState.HANGMAN_GAME && !isLoading && <HangmanGame words={hangmanWords} onBack={handleBackToMiniPractice} onLoadMore={handleLoadMoreHangman} onEarnPoints={handleEarnPoints} onStartGame={handleStartHangman} language={hangmanLanguage} />}
       {screen === ScreenState.RHYME_GAME && !isLoading && <RhymeGame questions={rhymeQuestions} onBack={handleBackToMiniPractice} onLoadMore={handleLoadMoreRhymes} onEarnPoints={handleEarnPoints} />}
       {screen === ScreenState.READING_GAME && !isLoading && <ReadingGame questions={readingQuestions} onBack={handleBackToMiniPractice} onGameAction={handleReadingGameAction} onEarnPoints={handleEarnPoints} />}
       {screen === ScreenState.TONGUE_TWISTERS && <TongueTwisters onBack={handleBackToMap} />}

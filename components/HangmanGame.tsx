@@ -7,7 +7,9 @@ interface HangmanGameProps {
   words: { word: string, hint: string, hebrewHint: string, imagePrompt: string }[];
   onBack: () => void;
   onLoadMore?: (lang: 'hebrew' | 'english') => Promise<void>;
+  onStartGame?: (lang: 'hebrew' | 'english') => Promise<void>;
   onEarnPoints?: (amount: number) => void;
+  language: 'hebrew' | 'english';
 }
 
 // Hebrew Alphabet
@@ -22,8 +24,7 @@ const ENGLISH_KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
 
 const MAX_WRONG = 6;
 
-export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadMore, onEarnPoints }) => {
-  const [language, setLanguage] = useState<'hebrew' | 'english'>('hebrew');
+export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadMore, onStartGame, onEarnPoints, language }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [guessedLetters, setGuessedLetters] = useState<Set<string>>(new Set());
   const [wrongGuesses, setWrongGuesses] = useState(0);
@@ -49,7 +50,9 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
   // Hebrew: Remove Nikud. English: Ensure Uppercase.
   const cleanWord = language === 'hebrew' ? removeNikud(wordToPlay) : wordToPlay.toUpperCase();
 
-  const imageUrl = currentWordObj ? getHangmanImageUrl(currentWordObj.hint) : '';
+  // Use imagePrompt for generation if available (faster/better for English), otherwise hint
+  const imgPrompt = currentWordObj ? (currentWordObj.imagePrompt || currentWordObj.hint) : '';
+  const imageUrl = getHangmanImageUrl(imgPrompt);
 
   useEffect(() => {
     setGuessedLetters(new Set());
@@ -57,22 +60,23 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
     setStatus('playing');
     setImageLoaded(false);
     setImageError(false);
-  }, [currentIndex, language, words]); // Reset when language or words change
+  }, [currentIndex, language, words]); 
 
-  // Load initial words when language changes if needed (or assume parent updates 'words' prop)
-  // But 'HangmanGame' receives 'words'. App must handle the fetch.
-  // We trigger onLoadMore when switching language.
   const handleLanguageChange = async (lang: 'hebrew' | 'english') => {
       if (lang === language) return;
-      setLanguage(lang);
+      
       setScore(0);
       setGuessedLetters(new Set());
       setWrongGuesses(0);
-      if (onLoadMore) {
+      setCurrentIndex(0); // Reset index immediately
+      
+      if (onStartGame) {
+          await onStartGame(lang);
+          // Parent handles loading and unmount, so no local loading needed typically.
+      } else if (onLoadMore) {
           setIsLoadingNext(true);
           await onLoadMore(lang);
           setIsLoadingNext(false);
-          setCurrentIndex(0); // Reset to first word of new list
       }
   };
 
@@ -211,10 +215,10 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
 
   return (
     <div className="h-full w-full bg-indigo-50 flex flex-col items-center p-2 md:p-4 relative overflow-hidden">
-      {/* Look-Ahead Preloader: Load next 3 images invisibly */}
+      {/* Look-Ahead Preloader: Load next 3 images invisibly using imagePrompt */}
       <div style={{ display: 'none' }}>
           {words.slice(currentIndex + 1, currentIndex + 4).map((w, i) => (
-              <img key={`preload-${i}`} src={getHangmanImageUrl(w.hint)} alt="preload" />
+              <img key={`preload-${i}`} src={getHangmanImageUrl(w.imagePrompt || w.hint)} alt="preload" />
           ))}
       </div>
 
@@ -298,11 +302,13 @@ export const HangmanGame: React.FC<HangmanGameProps> = ({ words, onBack, onLoadM
                 )}
              </div>
              
-             {/* English Hint */}
+             {/* Hint Display */}
              <div className="text-center mb-2">
+                {/* Primary Hint (Translation or Clue) */}
                 <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs md:text-sm font-bold shadow-sm border border-indigo-200 block mb-1">
                     {currentWordObj?.hint || ""}
                 </span>
+                {/* Secondary Hint (Description) */}
                 <span className="text-indigo-500 text-xs md:text-sm font-bold block max-w-[200px] leading-tight" dir={language === 'hebrew' ? "rtl" : "ltr"}>
                     {currentWordObj?.hebrewHint || ""}
                 </span>

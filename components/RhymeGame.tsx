@@ -55,10 +55,11 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
     setIsCorrect(correct);
 
     if (correct) {
-      setScore(s => s + 3); // Changed from 2 to 3
-      if (onEarnPoints) onEarnPoints(3); // Changed from 2 to 3
+      setScore(s => s + 3); 
+      if (onEarnPoints) onEarnPoints(3);
       playTextToSpeech("Metsuyan! Excellent!");
       
+      // Reduced delay from 2000ms to 1200ms for faster feel
       setTimeout(async () => {
         if (currentIndex < questions.length - 1) {
           setCurrentIndex(prev => prev + 1);
@@ -67,12 +68,13 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
           await onLoadMore();
           setTimeout(() => {
              setIsLoadingNext(false);
+             // Safety check: ensure we actually have a next question
              setCurrentIndex(prev => prev + 1);
-          }, 500);
+          }, 100); // Reduced transition delay
         } else {
           playTextToSpeech("You finished all rhymes!");
         }
-      }, 2000);
+      }, 1200);
     } else {
       playTextToSpeech("Try again");
       setTimeout(() => {
@@ -93,8 +95,12 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
       setScore(0);
   };
 
+  // Initial Loading Screen
   if (!currentQuestion) return (
       <div className="h-full w-full bg-blue-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+          <div className="absolute top-[54px] left-8 z-20">
+             <Button onClick={onBack} color="red" size="sm">חֲזָרָה</Button>
+          </div>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
              <div className="text-9xl text-blue-500 animate-spin mb-4 drop-shadow-md origin-center">
                 🎵
@@ -146,7 +152,9 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
                     <div className="text-7xl text-blue-500 animate-spin mb-2 origin-center">
                         ♫
                     </div>
-                    <span className="text-blue-600 font-bold animate-pulse">עוד חרוזים...</span>
+                    <span className="text-blue-600 font-bold animate-pulse text-lg mb-4">מכין עוד חרוזים...</span>
+                    {/* Back button inside overlay for safety if loading hangs */}
+                    <Button onClick={onBack} color="red" size="sm" className="pointer-events-auto">חֲזָרָה</Button>
                 </div>
             )}
 
@@ -172,19 +180,21 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
             <button
               key={idx}
               onClick={() => handleOptionClick(opt)}
-              disabled={isAnswered || isLoadingNext}
+              // Remove disabled attribute to allow audio click on speaker icon even if answered
+              // Logic for answering is handled inside handleOptionClick
               className={`
                 relative h-20 md:h-24 rounded-2xl border-b-4 text-2xl md:text-3xl font-bold font-dynamic shadow-lg transition-all duration-300
                 ${btnColor}
-                ${isAnswered && opt === currentQuestion.rhymeWord ? 'scale-110 z-10' : 'active:scale-95'}
+                ${isAnswered && opt === currentQuestion.rhymeWord ? 'scale-110 z-10' : ''}
+                ${!isAnswered ? 'active:scale-95' : 'cursor-default'}
               `}
             >
               {opt}
               <div 
-                className="absolute top-1 right-1 w-6 h-6 md:w-8 md:h-8 bg-gray-100 rounded-full flex items-center justify-center shadow-sm hover:bg-blue-200 cursor-pointer"
+                className="absolute top-1 right-1 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center shadow-sm hover:bg-blue-200 cursor-pointer z-20 active:scale-95"
                 onClick={(e) => playWord(e, opt)}
               >
-                <span className="text-xs md:text-sm">🔊</span>
+                <span className="text-sm">🔊</span>
               </div>
             </button>
           );
@@ -192,7 +202,7 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
       </div>
 
       {isCorrect && (
-         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+         <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-30">
             <div className="text-9xl animate-bounce">🎵</div>
          </div>
       )}
