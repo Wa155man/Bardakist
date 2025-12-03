@@ -61,14 +61,6 @@ const PRACTICE_OPTIONS: PracticeOption[] = [
     colorText: 'text-yellow-600'
   },
   {
-    id: 'sounds',
-    title: 'צְלִילִים',
-    subtitle: 'Sounds',
-    icon: '🔊',
-    colorHeader: 'bg-teal-500',
-    colorText: 'text-teal-600'
-  },
-  {
     id: 'sentences',
     title: 'מִשְׁפָּטִים',
     subtitle: 'Sentences',
@@ -79,7 +71,7 @@ const PRACTICE_OPTIONS: PracticeOption[] = [
   {
     id: 'reading',
     title: 'הֲבָנַת אוֹתִי',
-    subtitle: 'Did You Understand?',
+    subtitle: 'Reading',
     icon: '🧠',
     colorHeader: 'bg-cyan-500',
     colorText: 'text-cyan-600'
@@ -91,6 +83,14 @@ const PRACTICE_OPTIONS: PracticeOption[] = [
     icon: '📝',
     colorHeader: 'bg-pink-500',
     colorText: 'text-pink-600'
+  },
+  {
+    id: 'sounds', // Placeholder if needed or removed, keeping 10 for symmetry
+    title: 'צְלִילִים',
+    subtitle: 'Sounds',
+    icon: '🔊',
+    colorHeader: 'bg-teal-500',
+    colorText: 'text-teal-600'
   }
 ];
 
@@ -103,35 +103,35 @@ export const MiniPracticeGrid: React.FC<MiniPracticeGridProps> = ({ onSelectOpti
   return (
     <div className="h-full w-full bg-gray-50 flex flex-col p-2 md:p-4 relative overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2 pt-2 px-4 shrink-0">
-        <h1 className="text-3xl md:text-4xl font-black text-gray-700 font-dynamic">Mini Games</h1>
+      <div className="flex items-center justify-between mb-2 shrink-0">
+        <h1 className="text-2xl md:text-3xl font-black text-gray-700 font-dynamic">Mini Games</h1>
         <Button onClick={onBack} color="red" size="sm">Back</Button>
       </div>
 
       {/* Grid Container - Uses flex-1 to fill space */}
-      <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 h-full p-2 auto-rows-fr">
+      <div className="flex-1 overflow-y-auto md:overflow-hidden min-h-0">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4 h-full content-start md:content-center auto-rows-fr">
             {PRACTICE_OPTIONS.map((opt) => (
             <button
                 key={opt.id}
                 onClick={() => onSelectOption(opt.id)}
-                className="group bg-white rounded-xl md:rounded-2xl shadow-md border-b-4 border-gray-200 overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-200 flex flex-col"
+                className="group bg-white rounded-xl shadow-sm border-b-4 border-gray-200 overflow-hidden hover:-translate-y-1 hover:shadow-md transition-all duration-200 flex flex-col h-full min-h-[100px]"
             >
                 {/* Card Header */}
-                <div className={`${opt.colorHeader} py-1 md:py-2 px-1 w-full text-center shrink-0`}>
-                <span className="text-white font-bold text-sm md:text-lg block leading-tight font-dynamic drop-shadow-sm truncate">
-                    {opt.title}
-                </span>
+                <div className={`${opt.colorHeader} py-1 px-1 w-full text-center shrink-0`}>
+                  <span className="text-white font-bold text-xs md:text-base block leading-tight font-dynamic drop-shadow-sm truncate">
+                      {opt.title}
+                  </span>
                 </div>
 
                 {/* Card Body */}
-                <div className="flex-1 p-2 flex flex-col items-center justify-center gap-1 bg-gradient-to-b from-white to-gray-50">
-                <div className="text-3xl md:text-5xl group-hover:scale-110 transition-transform duration-300 filter drop-shadow-sm">
-                    {opt.icon}
-                </div>
-                <span className={`text-xs md:text-sm font-bold ${opt.colorText} opacity-60 uppercase tracking-wide font-dynamic truncate w-full`}>
-                    {opt.subtitle}
-                </span>
+                <div className="flex-1 p-1 md:p-2 flex flex-col items-center justify-center gap-1 bg-gradient-to-b from-white to-gray-50">
+                  <div className="text-2xl md:text-4xl group-hover:scale-110 transition-transform duration-300 filter drop-shadow-sm">
+                      {opt.icon}
+                  </div>
+                  <span className={`text-[10px] md:text-xs font-bold ${opt.colorText} opacity-70 uppercase tracking-wide font-dynamic truncate w-full`}>
+                      {opt.subtitle}
+                  </span>
                 </div>
             </button>
             ))}

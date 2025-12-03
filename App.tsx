@@ -337,7 +337,7 @@ export const App: React.FC = () => {
   const handleCorrectAnswer = async () => {
     handleEarnPoints(3);
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentIndex(prev => prev + 1);
       setNextQuestion(questions[currentQuestionIndex + 2]);
     } else {
       await handleLoadMorePractice();
@@ -349,7 +349,7 @@ export const App: React.FC = () => {
   const handleSnowmanComplete = () => { handleLevelComplete(); };
   const handleBackToMap = () => { setScreen(ScreenState.LEVEL_SELECT); setQuestions([]); setSentenceQuestions([]); setHangmanWords([]); setRhymeQuestions([]); setReadingQuestions([]); setCurrentLevel(null); };
   const handleBackToMiniPractice = () => { setScreen(ScreenState.MINI_PRACTICE_SELECT); };
-  const showTopBar = [ScreenState.LEVEL_SELECT, ScreenState.GAME_SESSION].includes(screen);
+  const showTopBar = ([ScreenState.LEVEL_SELECT, ScreenState.GAME_SESSION] as ScreenState[]).includes(screen);
 
   return (
     <ErrorBoundary>
