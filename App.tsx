@@ -309,7 +309,10 @@ export const App: React.FC = () => {
   };
   
   const handleLoadMoreReading = async () => {
-    try { setReadingQuestions(prev => [...prev, ...(await generateReadingQuestions())]); } catch (e) { console.error(e); }
+    try { 
+      const moreQuestions = await generateReadingQuestions();
+      setReadingQuestions(prev => [...prev, ...moreQuestions]); 
+    } catch (e) { console.error(e); }
   };
   
   const handleOpenTongueTwisters = () => { setScreen(ScreenState.TONGUE_TWISTERS); };

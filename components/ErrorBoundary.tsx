@@ -9,16 +9,15 @@ interface State {
   hasError: boolean;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  // FIX: Switched to constructor for state initialization to support older environments
-  // that may not handle class field initializers, which can cause type errors.
+export class ErrorBoundary extends React.Component<Props, State> {
+  public state: State = { hasError: false };
+
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
   }
 
   static getDerivedStateFromError(_: Error): State {
-    // Update state so the next render will show the fallback UI.
     return { hasError: true };
   }
 
@@ -39,7 +38,6 @@ export class ErrorBoundary extends Component<Props, State> {
             color="red" 
             size="lg"
             onClick={() => {
-              // Clear any potentially corrupted state and reload
               localStorage.clear();
               window.location.reload();
             }}

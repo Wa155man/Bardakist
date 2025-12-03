@@ -1,32 +1,36 @@
 
-export enum ScreenState {
-  HOME = 'HOME',
-  LEVEL_SELECT = 'LEVEL_SELECT', // The "Map" view
-  LEVEL_DETAIL = 'LEVEL_DETAIL', // Inside a specific vowel zone
-  GAME_SESSION = 'GAME_SESSION',
-  VICTORY = 'VICTORY',
-  TONGUE_TWISTERS = 'TONGUE_TWISTERS',
-  SNOWMAN_GAME = 'SNOWMAN_GAME',
-  MINI_PRACTICE_SELECT = 'MINI_PRACTICE_SELECT',
-  MATCHING_GAME = 'MATCHING_GAME',
-  NAMING_GAME = 'NAMING_GAME',
-  MEMORY_GAME = 'MEMORY_GAME',
-  HANGMAN_GAME = 'HANGMAN_GAME',
-  RHYME_GAME = 'RHYME_GAME',
-  READING_GAME = 'READING_GAME',
-  WRITING_GAME = 'WRITING_GAME',
-  DICTATION_GAME = 'DICTATION_GAME',
-  PET_SELECTION = 'PET_SELECTION' // New Screen
-}
+export const ScreenState = {
+  HOME: 'HOME',
+  LEVEL_SELECT: 'LEVEL_SELECT', // The "Map" view
+  LEVEL_DETAIL: 'LEVEL_DETAIL', // Inside a specific vowel zone
+  GAME_SESSION: 'GAME_SESSION',
+  VICTORY: 'VICTORY',
+  TONGUE_TWISTERS: 'TONGUE_TWISTERS',
+  SNOWMAN_GAME: 'SNOWMAN_GAME',
+  MINI_PRACTICE_SELECT: 'MINI_PRACTICE_SELECT',
+  MATCHING_GAME: 'MATCHING_GAME',
+  NAMING_GAME: 'NAMING_GAME',
+  MEMORY_GAME: 'MEMORY_GAME',
+  HANGMAN_GAME: 'HANGMAN_GAME',
+  RHYME_GAME: 'RHYME_GAME',
+  READING_GAME: 'READING_GAME',
+  WRITING_GAME: 'WRITING_GAME',
+  DICTATION_GAME: 'DICTATION_GAME',
+  PET_SELECTION: 'PET_SELECTION' // New Screen
+} as const;
 
-export enum VowelType {
-  KAMATZ = 'Kamatz',
-  PATACH = 'Patach',
-  CHIRIK = 'Chirik',
-  SEGOL = 'Segol',
-  SHURUK = 'Shuruk',
-  CHOLAM = 'Cholam'
-}
+export type ScreenState = typeof ScreenState[keyof typeof ScreenState];
+
+export const VowelType = {
+  KAMATZ: 'Kamatz',
+  PATACH: 'Patach',
+  CHIRIK: 'Chirik',
+  SEGOL: 'Segol',
+  SHURUK: 'Shuruk',
+  CHOLAM: 'Cholam'
+} as const;
+
+export type VowelType = typeof VowelType[keyof typeof VowelType];
 
 export interface LevelNode {
   id: string;
