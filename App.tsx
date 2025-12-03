@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { LevelMap } from './components/LevelMap';
 import { TopBar } from './components/TopBar';
@@ -20,21 +19,26 @@ import { DictationGame } from './components/DictationGame';
 import { FontControl } from './components/FontControl';
 import { RewardOverlay } from './components/RewardOverlay'; 
 import { PetSelection } from './components/PetSelection'; 
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ScreenState, LevelNode, UserProgress, GameQuestion, AppSettings, SentenceQuestion, RhymeQuestion, ReadingQuestion, GuriReward, PetProfile } from './types';
 import { generateLevelContent, generateSentenceQuestions, generateHangmanWords, generateRhymeQuestions, generateReadingQuestions, getMiniGameImageUrl, getHangmanImageUrl } from './services/geminiService';
 import { LEVEL_NODES, GURI_REWARDS, PETS } from './constants';
 
 export const App: React.FC = () => {
-  // ... existing states ...
   const [screen, setScreen] = useState<ScreenState>(ScreenState.LEVEL_SELECT);
   const [returnScreen, setReturnScreen] = useState<ScreenState>(ScreenState.LEVEL_SELECT);
   const [currentLevel, setCurrentLevel] = useState<LevelNode | null>(null);
   const [questions, setQuestions] = useState<GameQuestion[]>([]);
+  const [nextQuestion, setNextQuestion] = useState<GameQuestion | undefined>(undefined);
+
   const [sentenceQuestions, setSentenceQuestions] = useState<SentenceQuestion[]>([]);
   const [hangmanWords, setHangmanWords] = useState<{word: string, hint: string, hebrewHint: string, imagePrompt: string}[]>([]);
-  const [hangmanHistory, setHangmanHistory] = useState<Set<string>>(new Set());
+  const [hangmanHistory, setHangmanHistory] = useState<Set<string>>(() => {
+      try { const saved = localStorage.getItem('hangmanHistory'); return saved ? new Set(JSON.parse(saved)) : new Set(); } catch (e) { return new Set(); }
+  });
+
+  useEffect(() => { localStorage.setItem('hangmanHistory', JSON.stringify(Array.from(hangmanHistory))); }, [hangmanHistory]);
   
-  // ... (Rest of existing history states) ...
   const [rhymeQuestions, setRhymeQuestions] = useState<RhymeQuestion[]>([]);
   const [rhymeHistory, setRhymeHistory] = useState<Set<string>>(new Set());
   const [isLoadingRhymes, setIsLoadingRhymes] = useState(false);
@@ -45,58 +49,32 @@ export const App: React.FC = () => {
   const [snowmanLanguage, setSnowmanLanguage] = useState<'hebrew' | 'english'>('hebrew');
   const [currentReward, setCurrentReward] = useState<GuriReward | null>(null);
 
-  // ... (History logic) ...
   const [sentenceHistory, setSentenceHistory] = useState<Set<string>>(() => {
-      try {
-          const saved = localStorage.getItem('sentenceHistory');
-          return saved ? new Set(JSON.parse(saved)) : new Set();
-      } catch (e) {
-          console.error("Failed to load sentence history", e);
-          return new Set();
-      }
+      try { const saved = localStorage.getItem('sentenceHistory'); return saved ? new Set(JSON.parse(saved)) : new Set(); } catch (e) { return new Set(); }
   });
 
-  useEffect(() => {
-      localStorage.setItem('sentenceHistory', JSON.stringify(Array.from(sentenceHistory)));
-  }, [sentenceHistory]);
+  useEffect(() => { localStorage.setItem('sentenceHistory', JSON.stringify(Array.from(sentenceHistory))); }, [sentenceHistory]);
 
   const [userProgress, setUserProgress] = useState<UserProgress>(() => {
     try {
         const saved = localStorage.getItem('userProgress');
         return saved ? JSON.parse(saved) : { totalCoins: 0, completedLevels: [] };
     } catch (e) {
-        console.error("Failed to load user progress", e);
+        console.error("Corrupted userProgress in localStorage", e);
         return { totalCoins: 0, completedLevels: [] };
     }
   });
   
-  // ... (User progress effect & handleResetScore) ...
-  useEffect(() => {
-    localStorage.setItem('userProgress', JSON.stringify(userProgress));
-  }, [userProgress]);
+  useEffect(() => { localStorage.setItem('userProgress', JSON.stringify(userProgress)); }, [userProgress]);
 
-  const handleResetScore = () => {
-      setUserProgress(prev => ({ ...prev, totalCoins: 0 }));
-  };
+  const handleResetScore = () => { setUserProgress(prev => ({ ...prev, totalCoins: 0 })); };
 
-  // ... (Settings and Pet Selection Logic - unchanged) ...
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(() => {
     const saved = localStorage.getItem('appSettings');
-    const defaults: AppSettings = { 
-      childName: 'Tommy', 
-      soundEffects: true, 
-      autoPlayAudio: true,
-      fontStyle: 'print',
-      selectedPetId: 'guri' 
-    };
+    const defaults: AppSettings = { childName: 'Tommy', soundEffects: true, autoPlayAudio: true, fontStyle: 'print', selectedPetId: 'guri' };
     if (!saved) return defaults;
-    try {
-        const parsed = JSON.parse(saved);
-        const merged = { ...defaults, ...parsed };
-        if (merged.fontStyle === 'marker') merged.fontStyle = 'playpen';
-        return merged;
-    } catch (e) { return defaults; }
+    try { return { ...defaults, ...JSON.parse(saved) }; } catch (e) { return defaults; }
   });
 
   const handleEarnPoints = (amount: number) => {
@@ -111,23 +89,20 @@ export const App: React.FC = () => {
           const rewardsList = currentPet.rewards || GURI_REWARDS;
           const rewardIndex = (newMilestone - 1) % rewardsList.length;
           const reward = rewardsList[rewardIndex];
-          setTimeout(() => {
-             setCurrentReward({ ...reward, milestone: milestoneTarget });
-          }, 500);
+          setTimeout(() => { setCurrentReward({ ...reward, milestone: milestoneTarget }); }, 500);
       }
       return { ...prev, totalCoins: newTotal };
     });
   };
 
-  // ... (useEffect for pet selection redirect - unchanged) ...
   useEffect(() => {
       const hasSelectedPet = localStorage.getItem('has_selected_pet');
-      if (!hasSelectedPet) setScreen(ScreenState.PET_SELECTION);
+      if (!hasSelectedPet) {
+          setScreen(ScreenState.PET_SELECTION);
+      }
   }, []);
 
-  const getSelectedPet = (): PetProfile => {
-      return PETS.find(p => p.id === settings.selectedPetId) || PETS[0];
-  };
+  const getSelectedPet = (): PetProfile => PETS.find(p => p.id === settings.selectedPetId) || PETS[0];
 
   const handlePetSelection = (petId: string) => {
       handleSaveSettings({ ...settings, selectedPetId: petId });
@@ -137,11 +112,7 @@ export const App: React.FC = () => {
       if (!hasSeenMapTutorial) {
         setTimeout(() => {
             const pet = PETS.find(p => p.id === petId) || PETS[0];
-            startTutorial([
-                { message: `שלום! אני ${pet.nameHebrew}. ברוכים הבאים להרפתקאות בעברית!` },
-                { message: "טיילו בשביל האבנים הצהובות כדי לפתוח שלבים ולהרוויח מטבעות." },
-                { message: "לחצו על השלב הראשון כדי להתחיל במסע!" }
-            ]);
+            startTutorial([{ message: `שלום! אני ${pet.nameHebrew}. ברוכים הבאים להרפתקאות בעברית!` }, { message: "טיילו בשביל האבנים הצהובות כדי לפתוח שלבים ולהרוויח מטבעות." }, { message: "לחצו על השלב הראשון כדי להתחיל במסע!" }]);
             localStorage.setItem('tutorial_map_completed', 'true');
         }, 500);
       }
@@ -152,10 +123,7 @@ export const App: React.FC = () => {
     localStorage.setItem('appSettings', JSON.stringify(newSettings));
   };
   
-  const handleLoadProgress = (newProgress: UserProgress) => {
-    setUserProgress(newProgress);
-    localStorage.setItem('userProgress', JSON.stringify(newProgress));
-  };
+  const handleLoadProgress = (newProgress: UserProgress) => { setUserProgress(newProgress); };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -167,37 +135,13 @@ export const App: React.FC = () => {
   }, [settings.fontStyle]);
 
   const handleResetProgress = () => {
-    const resetProgress = { totalCoins: 0, completedLevels: [] };
-    setUserProgress(resetProgress);
-    localStorage.setItem('userProgress', JSON.stringify(resetProgress));
-    // Clear keys
-    localStorage.removeItem('sentenceHistory');
-    localStorage.removeItem('hangmanHistory');
-    localStorage.removeItem('rhymeHistory');
-    localStorage.removeItem('has_selected_pet');
-    localStorage.removeItem('tutorial_map_completed');
-    // ... remove other keys ...
+    localStorage.clear();
     location.reload();
   };
 
-  // ... (Tutorial logic - unchanged) ...
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialSteps, setTutorialSteps] = useState<TutorialStep[]>([]);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
-
-  useEffect(() => {
-    const hasSeenMapTutorial = localStorage.getItem('tutorial_map_completed');
-    const hasSelectedPet = localStorage.getItem('has_selected_pet');
-    if (!hasSeenMapTutorial && hasSelectedPet) {
-      const pet = getSelectedPet();
-      startTutorial([
-        { message: `שלום! אני ${pet.nameHebrew}. ברוכים הבאים להרפתקאות בעברית!` },
-        { message: "טיילו בשביל האבנים הצהובות כדי לפתוח שלבים ולהרוויח מטבעות." },
-        { message: "לחצו על השלב הראשון כדי להתחיל במסע!" }
-      ]);
-      localStorage.setItem('tutorial_map_completed', 'true');
-    }
-  }, []);
 
   const startTutorial = (steps: TutorialStep[]) => {
     setTutorialSteps(steps);
@@ -206,43 +150,263 @@ export const App: React.FC = () => {
   };
 
   const handleTutorialNext = () => {
-    if (tutorialStepIndex < tutorialSteps.length - 1) {
-      setTutorialStepIndex(prev => prev + 1);
-    } else {
-      setTutorialActive(false);
-    }
+    if (tutorialStepIndex < tutorialSteps.length - 1) setTutorialStepIndex(prev => prev + 1);
+    else setTutorialActive(false);
   };
 
   const handleSelectLevel = async (level: LevelNode) => {
-    // ... (Existing Level Logic) ...
     setCurrentLevel(level);
     setIsLoading(true);
     setScreen(ScreenState.GAME_SESSION); 
     try {
       const generatedQuestions = await generateLevelContent(level.vowel);
       setQuestions(generatedQuestions);
+      setNextQuestion(generatedQuestions.length > 1 ? generatedQuestions[1] : undefined);
       setCurrentQuestionIndex(0);
       if (generatedQuestions.length > 0) {
-          // Preload images
           const imgPromise = new Promise<void>((resolve) => {
               const firstImg = new Image();
+              // FIX: Wrap resolve in a function to match event handler signature
               firstImg.onload = () => resolve();
+              // FIX: Wrap resolve in a function to match event handler signature
               firstImg.onerror = () => resolve();
               firstImg.src = getMiniGameImageUrl(generatedQuestions[0].correctTranslation);
           });
           const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 1000));
           await Promise.race([imgPromise, timeoutPromise]);
-          generatedQuestions.slice(1).forEach(q => {
-            const img = new Image();
-            img.src = getMiniGameImageUrl(q.correctTranslation);
-          });
+          generatedQuestions.slice(1).forEach(q => { new Image().src = getMiniGameImageUrl(q.correctTranslation); });
       }
-      // Tutorial check
       const hasSeenGameTutorial = localStorage.getItem('tutorial_game_completed');
       if (!hasSeenGameTutorial) {
         setTimeout(() => {
-          startTutorial([
-            { message: "הנה האתגר הראשון שלכם!" },
-            { message: "לחצו על המילה הגדולה כדי לשמוע איך אומרים אותה." },
-            { message: "לאחר מכן, בחרו את התרגום הנכון באנגלית מהכפתורים למטה." }
-          
+          startTutorial([{ message: "הנה האתגר הראשון שלכם!" }, { message: "לחצו על המילה הגדולה כדי לשמוע איך אומרים אותה." }, { message: "לאחר מכן, בחרו את התרגום הנכון באנגלית מהכפתורים למטה." }]);
+          localStorage.setItem('tutorial_game_completed', 'true');
+        }, 500);
+      }
+    } catch (e) { console.error(e); } finally { setIsLoading(false); }
+  };
+
+  const handleQuickPlay = async () => {
+    setScreen(ScreenState.SNOWMAN_GAME);
+    const hasSeen = localStorage.getItem('tutorial_sentences_completed');
+    if (!hasSeen) {
+        setTimeout(() => { startTutorial([{ message: "ברוכים הבאים למשחק המשפטים!" }, { message: "השלימו את המילה החסרה במשפט כדי לבנות את איש השלג." }]); localStorage.setItem('tutorial_sentences_completed', 'true'); }, 500);
+    }
+  };
+  
+  const handleSentenceGameStart = async (language: 'hebrew' | 'english') => {
+      setIsLoading(true);
+      setSnowmanLanguage(language);
+      try {
+          const historyArray = Array.from(sentenceHistory);
+          const data = await generateSentenceQuestions(language, historyArray);
+          const newHistory = new Set(sentenceHistory);
+          data.forEach(q => newHistory.add(q.fullSentence));
+          setSentenceHistory(newHistory);
+          setSentenceQuestions(data);
+      } catch (e) { console.error("Failed to start sentence game", e); } finally { setIsLoading(false); }
+  };
+
+  const handleLoadMoreSentences = async (language: 'hebrew' | 'english') => {
+    try {
+      const historyArray = Array.from(sentenceHistory);
+      const newQuestions = await generateSentenceQuestions(language, historyArray);
+      const newHistory = new Set(sentenceHistory);
+      newQuestions.forEach(q => newHistory.add(q.fullSentence));
+      setSentenceHistory(newHistory);
+      setSentenceQuestions(prev => [...prev, ...newQuestions]);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleOpenMiniPractice = () => { setScreen(ScreenState.MINI_PRACTICE_SELECT); };
+
+  const handleLoadMoreHangman = async (language: 'hebrew' | 'english') => {
+      try {
+          const currentHistory = Array.from(hangmanHistory);
+          const newWords = await generateHangmanWords(language, currentHistory);
+          const newHistory = new Set(hangmanHistory);
+          newWords.forEach(w => newHistory.add(w.word));
+          setHangmanHistory(newHistory);
+          newWords.forEach(w => { new Image().src = getHangmanImageUrl(w.hint); });
+          setHangmanWords(prev => [...prev, ...newWords]);
+      } catch (e) { console.error(e); }
+  };
+
+  const handleLoadMoreRhymes = async () => {
+    if (isLoadingRhymes) return;
+    setIsLoadingRhymes(true);
+    try {
+        const history = Array.from(rhymeHistory);
+        const newQuestions = await generateRhymeQuestions(history);
+        const newHistory = new Set(rhymeHistory);
+        newQuestions.forEach(q => newHistory.add(q.targetWord));
+        setRhymeHistory(newHistory);
+        setRhymeQuestions(prev => [...prev, ...newQuestions]);
+    } catch (e) { console.error(e); } finally { setIsLoadingRhymes(false); }
+  };
+
+  const handleMiniPracticeSelect = async (optionId: string) => {
+    const tutorials: Record<string, TutorialStep[]> = {
+      matching: [{ message: "התאימו בין אות בכתב יד לאות בדפוס." }],
+      naming: [{ message: "בחרו את האות בדפוס שמתאימה לאות בכתב יד." }],
+      writing: [{ message: "כתבו את האותיות בין השורות הכחולות." }, { message: "החליפו בין תרגול דפוס וכתב יד!" }],
+      memory: [{ message: "מצאו את זוגות האותיות הזהות." }],
+      dictation: [{ message: "הזינו מילים, שננו אותן, ונסו לכתוב אותן נכון." }],
+      hangman: [{ message: "נחשו אותיות כדי לגלות את המילה. אל תתנו לרובוט להיבנות!" }],
+      rhymes: [{ message: "בחרו את המילה שמתחרזת." }],
+      reading: [{ message: "קראו את הסיפור וענו על השאלה." }]
+    };
+
+    if (optionId === 'sentences') { setReturnScreen(ScreenState.MINI_PRACTICE_SELECT); handleQuickPlay(); return; }
+    
+    const screenMap: Record<string, ScreenState> = {
+      matching: ScreenState.MATCHING_GAME,
+      naming: ScreenState.NAMING_GAME,
+      writing: ScreenState.WRITING_GAME,
+      memory: ScreenState.MEMORY_GAME,
+      dictation: ScreenState.DICTATION_GAME,
+      hangman: ScreenState.HANGMAN_GAME,
+      rhymes: ScreenState.RHYME_GAME,
+      reading: ScreenState.READING_GAME,
+    };
+
+    if (screenMap[optionId]) {
+      setScreen(screenMap[optionId]);
+      const tutorialKey = `tutorial_${optionId}_completed`;
+      if (!localStorage.getItem(tutorialKey) && tutorials[optionId]) {
+          setTimeout(() => { startTutorial(tutorials[optionId]); localStorage.setItem(tutorialKey, 'true'); }, 500);
+      }
+      
+      if (optionId === 'hangman' || optionId === 'rhymes' || optionId === 'reading') {
+        setIsLoading(true);
+        try {
+          if (optionId === 'hangman') {
+            const history = Array.from(hangmanHistory);
+            const words = await generateHangmanWords('hebrew', history);
+            setHangmanWords(words);
+            // FIX: Correctly update history by adding new words to the existing set
+            const newHistory = new Set(hangmanHistory);
+            words.forEach(w => newHistory.add(w.word));
+            setHangmanHistory(newHistory);
+            words.forEach(w => { new Image().src = getHangmanImageUrl(w.hint); });
+          } else if (optionId === 'rhymes') {
+            const history = Array.from(rhymeHistory);
+            const data = await generateRhymeQuestions(history);
+            setRhymeQuestions(data);
+            setRhymeHistory(new Set(data.map(q=>q.targetWord)));
+          } else if (optionId === 'reading') {
+            setReadingQuestions(await generateReadingQuestions());
+          }
+        } catch (e) { console.error(e); } finally { setIsLoading(false); }
+      }
+    }
+  };
+  
+  const handleLoadMoreReading = async () => {
+    try { setReadingQuestions(prev => [...prev, ...(await generateReadingQuestions())]); } catch (e) { console.error(e); }
+  };
+  
+  const handleOpenTongueTwisters = () => { setScreen(ScreenState.TONGUE_TWISTERS); };
+
+  const handleLoadMorePractice = async () => {
+      if (!currentLevel) return;
+      setIsLoading(true);
+      try {
+          const currentWords = questions.map(q => q.word);
+          const newQuestions = await generateLevelContent(currentLevel.vowel, currentWords);
+          if (newQuestions.length > 0) {
+                // FIX: Wrap resolve in a function to match event handler signature
+                const imgPromise = new Promise<void>(resolve => { const img = new Image(); img.onload = () => resolve(); img.onerror = () => resolve(); img.src = getMiniGameImageUrl(newQuestions[0].correctTranslation); });
+                await Promise.race([imgPromise, new Promise<void>(resolve => setTimeout(resolve, 1000))]);
+                newQuestions.slice(1).forEach(q => { new Image().src = getMiniGameImageUrl(q.correctTranslation); });
+          }
+          setQuestions(prev => [...prev, ...newQuestions]);
+          setCurrentQuestionIndex(prev => prev + 1);
+          setNextQuestion(newQuestions.length > 0 ? newQuestions[0] : undefined);
+      } catch (e) { console.error(e); } finally { setIsLoading(false); }
+  };
+
+  // FIX: Make function async to allow await
+  const handleCorrectAnswer = async () => {
+    handleEarnPoints(3);
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setNextQuestion(questions[currentQuestionIndex + 2]);
+    } else {
+      await handleLoadMorePractice();
+    }
+  };
+
+  const handleWrongAnswer = () => {};
+  const handleLevelComplete = () => { setScreen(ScreenState.VICTORY); };
+  const handleSnowmanComplete = () => { handleLevelComplete(); };
+  const handleBackToMap = () => { setScreen(ScreenState.LEVEL_SELECT); setQuestions([]); setSentenceQuestions([]); setHangmanWords([]); setRhymeQuestions([]); setReadingQuestions([]); setCurrentLevel(null); };
+  const handleBackToMiniPractice = () => { setScreen(ScreenState.MINI_PRACTICE_SELECT); };
+  const showTopBar = [ScreenState.LEVEL_SELECT, ScreenState.GAME_SESSION].includes(screen);
+
+  return (
+    <ErrorBoundary>
+    <div className="relative w-[95vw] h-[95vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden border-[8px] border-slate-800 ring-4 ring-slate-900/50 select-none flex flex-col">
+      {showTopBar && <TopBar progress={userProgress} onHome={handleBackToMap} onOpenSettings={() => setIsSettingsOpen(true)} />}
+      
+      {screen === ScreenState.PET_SELECTION && <PetSelection onSelect={handlePetSelection} />}
+      {screen === ScreenState.LEVEL_SELECT && <LevelMap onSelectLevel={handleSelectLevel} onQuickPlay={() => { setReturnScreen(ScreenState.LEVEL_SELECT); handleQuickPlay(); }} onOpenTongueTwisters={handleOpenTongueTwisters} onOpenMiniPractice={handleOpenMiniPractice} />}
+      {screen === ScreenState.MINI_PRACTICE_SELECT && <MiniPracticeGrid onSelectOption={handleMiniPracticeSelect} onBack={handleBackToMap} />}
+      
+      {screen === ScreenState.MATCHING_GAME && <MatchingGame onBack={handleBackToMiniPractice} settings={settings} onEarnPoints={handleEarnPoints} />}
+      {screen === ScreenState.NAMING_GAME && <NamingGame onBack={handleBackToMiniPractice} settings={settings} onEarnPoints={handleEarnPoints} />}
+      {screen === ScreenState.WRITING_GAME && <WritingGame onBack={handleBackToMiniPractice} settings={settings} onEarnPoints={handleEarnPoints} />}
+      {screen === ScreenState.MEMORY_GAME && <MemoryGame onBack={handleBackToMiniPractice} onEarnPoints={handleEarnPoints} />}
+      {screen === ScreenState.DICTATION_GAME && <DictationGame onBack={handleBackToMiniPractice} onEarnPoints={handleEarnPoints} />}
+      {screen === ScreenState.HANGMAN_GAME && !isLoading && <HangmanGame words={hangmanWords} onBack={handleBackToMiniPractice} onLoadMore={handleLoadMoreHangman} onEarnPoints={handleEarnPoints} />}
+      {screen === ScreenState.RHYME_GAME && !isLoading && <RhymeGame questions={rhymeQuestions} onBack={handleBackToMiniPractice} onLoadMore={handleLoadMoreRhymes} onEarnPoints={handleEarnPoints} />}
+      {screen === ScreenState.READING_GAME && !isLoading && <ReadingGame questions={readingQuestions} onBack={handleBackToMiniPractice} onLoadMore={handleLoadMoreReading} onEarnPoints={handleEarnPoints} />}
+      {screen === ScreenState.TONGUE_TWISTERS && <TongueTwisters onBack={handleBackToMap} />}
+      {screen === ScreenState.SNOWMAN_GAME && !isLoading && <SnowmanGame questions={sentenceQuestions} onComplete={handleSnowmanComplete} onBack={() => { if (returnScreen === ScreenState.LEVEL_SELECT) { handleBackToMap(); } else { handleBackToMiniPractice(); } }} onLoadMore={handleLoadMoreSentences} onStartGame={handleSentenceGameStart} settings={settings} onEarnPoints={handleEarnPoints} language={snowmanLanguage} />}
+
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center h-full bg-green-50 rounded-[2.5rem]">
+          <div className="w-24 h-24 border-8 border-green-200 border-t-green-500 rounded-full animate-spin mb-4"></div>
+          <h2 className="text-3xl font-bold text-green-700 animate-pulse">...טוען</h2>
+        </div>
+      )}
+
+      {screen === ScreenState.GAME_SESSION && currentLevel && questions[currentQuestionIndex] && (
+        <div className="h-full w-full bg-indigo-50 pt-14 md:pt-20 relative overflow-hidden flex flex-col">
+           <div className="container mx-auto px-4 relative z-10 flex-1 flex flex-col">
+             <div className="text-center mb-1 md:mb-2 shrink-0">
+               <h1 className="text-xl md:text-2xl font-bold text-gray-700">{currentLevel.name}</h1>
+               <p className="text-gray-500 text-xs md:text-sm">{currentLevel.description}</p>
+             </div>
+             <div className="flex-1 min-h-0">
+                 <MiniGame question={questions[currentQuestionIndex]} nextQuestion={questions[currentQuestionIndex+1]} totalQuestions={questions.length} questionNumber={currentQuestionIndex + 1} onCorrect={handleCorrectAnswer} onWrong={handleWrongAnswer} isTutorialActive={tutorialActive} settings={settings} />
+             </div>
+           </div>
+        </div>
+      )}
+
+      {screen === ScreenState.VICTORY && (
+        <div className="h-full flex flex-col items-center justify-center bg-gradient-to-b from-yellow-100 to-orange-100 p-4 text-center overflow-hidden">
+          <div className="mb-8 pop-in"><span className="text-9xl filter drop-shadow-lg">🏆</span></div>
+          <h1 className="text-5xl md:text-6xl font-black text-orange-500 mb-4 drop-shadow-sm font-round">כָּל הַכָּבוֹד!</h1>
+          <p className="text-xl md:text-2xl text-gray-600 mb-8">{settings.childName ? `Amazing job, ${settings.childName}!` : "You did an amazing job!"}</p>
+          <div className="bg-white p-6 rounded-2xl shadow-xl mb-8 flex items-center gap-4">
+            <span className="text-yellow-500 text-4xl">💰</span>
+            <span className="text-4xl font-bold text-gray-800">Total: {userProgress.totalCoins}</span>
+          </div>
+          <Button onClick={handleBackToMap} color="green" size="lg">חזרה לתפריט</Button>
+        </div>
+      )}
+      
+      {tutorialActive && <TutorialOverlay steps={tutorialSteps} currentStepIndex={tutorialStepIndex} onNext={handleTutorialNext} onComplete={() => setTutorialActive(false)} pet={getSelectedPet()} />}
+      {currentReward && <RewardOverlay reward={currentReward} onClose={() => setCurrentReward(null)} pet={getSelectedPet()} />}
+      {isSettingsOpen && <SettingsModal settings={settings} userProgress={userProgress} onSave={handleSaveSettings} onClose={() => setIsSettingsOpen(false)} onResetProgress={handleResetProgress} onLoadProgress={handleLoadProgress} onResetScore={handleResetScore} pets={PETS} />}
+      
+      <FontControl currentFont={settings.fontStyle} onChange={(f) => handleSaveSettings({...settings, fontStyle: f})} />
+      <button onClick={() => setIsSettingsOpen(true)} className={`absolute z-[200] bg-white/90 p-3 rounded-full shadow-md border-2 border-gray-200 hover:rotate-90 transition-transform duration-300 ${screen === ScreenState.HANGMAN_GAME ? 'top-4 right-4' : 'bottom-4 right-4'}`} title="הגדרות">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+      </button>
+    </div>
+    </ErrorBoundary>
+  );
+};

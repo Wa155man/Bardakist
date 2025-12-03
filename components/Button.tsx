@@ -1,11 +1,8 @@
 import React from 'react';
 
-interface ButtonProps {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
-  onClick?: React.MouseEventHandler<HTMLButtonElement>;
   color?: 'green' | 'orange' | 'blue' | 'red' | 'yellow';
-  className?: string;
-  disabled?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -25,16 +22,13 @@ const sizeStyles = {
 
 export const Button: React.FC<ButtonProps> = ({ 
   children, 
-  onClick, 
   color = 'green', 
   className = '', 
-  disabled = false,
-  size = 'md'
+  size = 'md',
+  ...rest
 }) => {
   return (
     <button
-      onClick={onClick}
-      disabled={disabled}
       className={`
         ${colorStyles[color]} 
         ${sizeStyles[size]}
@@ -45,6 +39,7 @@ export const Button: React.FC<ButtonProps> = ({
         font-dynamic
         ${className}
       `}
+      {...rest}
     >
       {children}
     </button>

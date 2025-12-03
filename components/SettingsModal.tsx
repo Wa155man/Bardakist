@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from './Button';
 import { AppSettings, UserProgress, PetProfile } from '../types';
@@ -10,6 +9,7 @@ interface SettingsModalProps {
   onClose: () => void;
   onResetProgress: () => void;
   onLoadProgress: (progress: UserProgress) => void;
+  onResetScore: () => void;
   pets?: PetProfile[]; // Added pets prop
 }
 
@@ -20,6 +20,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   onResetProgress,
   onLoadProgress,
+  onResetScore,
   pets = []
 }) => {
   const [name, setName] = useState(settings.childName);
@@ -42,6 +43,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleReset = () => {
     if (confirm("האם אתם בטוחים שברצונכם לאפס את כל ההתקדמות? פעולה זו אינה הפיכה!")) {
       onResetProgress();
+      onClose();
+    }
+  };
+
+  const handleResetScore = () => {
+    if (confirm("האם אתם בטוחים שברצונכם לאפס את הניקוד (מטבעות)?")) {
+      onResetScore();
       onClose();
     }
   };
@@ -187,12 +195,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Reset Zone */}
-          <div className="pt-2 border-t border-slate-100">
+          <div className="pt-2 border-t border-slate-100 space-y-2">
+            <button
+              onClick={handleResetScore}
+              className="w-full text-orange-500 font-bold hover:bg-orange-50 p-3 rounded-xl transition-colors font-dynamic"
+            >
+              💰 אפס ניקוד (Reset Score)
+            </button>
             <button 
               onClick={handleReset}
               className="w-full text-red-500 font-bold hover:bg-red-50 p-3 rounded-xl transition-colors font-dynamic"
             >
-              ⚠️ אפס התקדמות (Reset)
+              ⚠️ אפס התקדמות (Reset All)
             </button>
           </div>
 
