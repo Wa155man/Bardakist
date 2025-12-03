@@ -218,9 +218,27 @@ export const VOWEL_SPECIFIC_FALLBACKS: Record<string, GameQuestion[]> = {
 };
 
 export const FALLBACK_RHYMES: RhymeQuestion[] = [
-    { id: 'fr1', targetWord: 'חַלּוֹן', rhymeWord: 'בַּלּוֹן', distractors: ['שֻׁלְחָן', 'כִּסֵּא', 'בַּיִת'], hint: 'Window' },
-    // ... existing rhymes
-    { id: 'fr35', targetWord: 'שׁוּעָל', rhymeWord: 'מַעְגָּל', distractors: ['זְאֵב', 'רִבּוּעַ', 'מְשֻׁלָּשׁ'], hint: 'Fox' }
+  { id: 'fr1', targetWord: 'חַלּוֹן', rhymeWord: 'בַּלּוֹן', distractors: ['שֻׁלְחָן', 'כִּסֵּא', 'בַּיִת'], hint: 'Window' },
+  { id: 'fr2', targetWord: 'שׁוּעָל', rhymeWord: 'מַעְגָּל', distractors: ['זְאֵב', 'רִבּוּעַ', 'מְשֻׁלָּשׁ'], hint: 'Fox' },
+  { id: 'fr3', targetWord: 'יָד', rhymeWord: 'כַּד', distractors: ['רֶגֶל', 'רֹאשׁ', 'בֶּטֶן'], hint: 'Hand' },
+  { id: 'fr4', targetWord: 'פֶּרַח', rhymeWord: 'קֶרַח', distractors: ['עֵץ', 'דֶּשֶׁא', 'שֶׁמֶשׁ'], hint: 'Flower' },
+  { id: 'fr5', targetWord: 'בַּיִת', rhymeWord: 'זַיִת', distractors: ['רְחוֹב', 'גַּג', 'דֶּלֶת'], hint: 'House' },
+  { id: 'fr6', targetWord: 'נֵר', rhymeWord: 'חָבֵר', distractors: ['אוֹר', 'עוּגָה', 'מַתָּנָה'], hint: 'Candle' },
+  { id: 'fr7', targetWord: 'קִיר', rhymeWord: 'סִיר', distractors: ['רִצְפָּה', 'תִּקְרָה', 'חַלּוֹן'], hint: 'Wall' },
+  { id: 'fr8', targetWord: 'בַּקְבּוּק', rhymeWord: 'חִבּוּק', distractors: ['מַיִם', 'כּוֹס', 'צַלַּחַת'], hint: 'Bottle' },
+  { id: 'fr9', targetWord: 'תַּפּוּז', rhymeWord: 'חָרוּז', distractors: ['תַּפּוּחַ', 'בָּנָנָה', 'אֲבַטִּיחַ'], hint: 'Orange' },
+  { id: 'fr10', targetWord: 'חָלָב', rhymeWord: 'זָהָב', distractors: ['מַיִם', 'מִיץ', 'שׁוֹקוֹ'], hint: 'Milk' },
+  { id: 'fr11', targetWord: 'יֶלֶד', rhymeWord: 'וֶרֶד', distractors: ['אַבָּא', 'סַבָּא', 'חָבֵר'], hint: 'Boy' },
+  { id: 'fr12', targetWord: 'מַתָּנָה', rhymeWord: 'גְּבִינָה', distractors: ['בָּלוֹן', 'עוּגָה', 'נֵר'], hint: 'Gift' },
+  { id: 'fr13', targetWord: 'כּוֹבַע', rhymeWord: 'צֶבַע', distractors: ['חֻלְצָה', 'מִכְנָסַיִם', 'נַעֲלַיִם'], hint: 'Hat' },
+  { id: 'fr14', targetWord: 'מְעִיל', rhymeWord: 'חָלִיל', distractors: ['צָעִיף', 'כְּפָפוֹת', 'מַגָּפַיִם'], hint: 'Coat' },
+  { id: 'fr15', targetWord: 'סַבּוֹן', rhymeWord: 'אֲרוֹן', distractors: ['מַגֶּבֶת', 'מַיִם', 'אַמְבַּטְיָה'], hint: 'Soap' },
+  { id: 'fr16', targetWord: 'גָּמָל', rhymeWord: 'סַרְגֵּל', distractors: ['סוּס', 'חֲמוֹר', 'מִדְבָּר'], hint: 'Camel' },
+  { id: 'fr17', targetWord: 'חָתוּל', rhymeWord: 'לוּל', distractors: ['כֶּלֶב', 'עַכְבָּר', 'צִפּוֹר'], hint: 'Cat' },
+  { id: 'fr18', targetWord: 'כַּדּוּר', rhymeWord: 'כִּנּוֹר', distractors: ['בֻּבָּה', 'מִשְׂחָק', 'קוּבִיָּה'], hint: 'Ball' },
+  { id: 'fr19', targetWord: 'שֶׁמֶשׁ', rhymeWord: 'גֶּשֶׁם', distractors: ['יָרֵחַ', 'כּוֹכָב', 'עָנָן'], hint: 'Sun' },
+  { id: 'fr20', targetWord: 'דֹּב', rhymeWord: 'צָהֹב', distractors: ['אַרְיֵה', 'פִּיל', 'קּוֹף'], hint: 'Bear' },
+  { id: 'fr21', targetWord: 'פִּיל', rhymeWord: 'חָצִיל', distractors: ['גִּיר', 'שִׁיר', 'קִיר'], hint: 'Elephant' }
 ];
 
 export const FALLBACK_READING_QUESTIONS: ReadingQuestion[] = [

@@ -10,16 +10,15 @@ const initializeGenAI = () => {
       return null;
   }
 
-  // Safely access environment variables to prevent startup crash
   let apiKey = '';
   try {
-      // @ts-ignore - This is a common pattern for accessing env vars in different environments
+      // Safe access to process.env.API_KEY avoiding ReferenceErrors
       if (typeof process !== 'undefined' && process.env) {
           // @ts-ignore
-          apiKey = process.env.API_KEY;
+          apiKey = process.env.API_KEY || '';
       }
   } catch (e) {
-      // process is not defined
+      // Ignore env access errors
   }
   
   if (!apiKey) {
@@ -121,8 +120,10 @@ const getTTSAudioBuffer = async (text: string): Promise<AudioBuffer | null> => {
 
   const fetchPromise = (async () => {
     try {
+      // Increased timeout to 5000ms (5s) to allow high-quality AI voice to load
+      // instead of falling back to robotic browser voice too quickly.
       const timeoutPromise = new Promise<null>((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 1200) // 1.2s timeout
+        setTimeout(() => reject(new Error("Timeout")), 5000) 
       );
 
       const response = await Promise.race([
@@ -180,9 +181,11 @@ const speakBrowser = (text: string) => {
     } else {
         u.lang = 'en-US';
     }
-    // High pitch + Fast rate = Young, lively, fun voice (less robotic)
-    u.rate = 1.2; 
-    u.pitch = 1.4; 
+    
+    // Adjusted to be more natural/humanoid (Standard Pitch/Rate)
+    u.rate = 1.0; 
+    u.pitch = 1.0; 
+    
     window.speechSynthesis.speak(u);
 };
 
@@ -286,17 +289,17 @@ export const generateHangmanWords = async (language: 'hebrew' | 'english' = 'heb
 
 export const generateRhymeQuestions = async (excludeWords: string[] = []): Promise<RhymeQuestion[]> => {
     const getFallback = () => {
-        // Filter out recent words
+        // Filter out recent words to ensure uniqueness in current set
         let available = FALLBACK_RHYMES.filter(q => !excludeWords.includes(q.targetWord));
         
-        // RECYCLE: If we ran out of unique rhymes, reset and use the full list again
-        if (available.length === 0) {
+        // RECYCLE: If we ran out of unique rhymes (or low on them), reset and use the full list again
+        if (available.length < 5) {
             available = FALLBACK_RHYMES;
         }
 
         const shuffled = [...available].sort(() => 0.5 - Math.random());
-        // Append unique ID to ensure React handles them as new questions
-        return shuffled.slice(0, 5).map((q, i) => ({ ...q, id: `rhyme-${Date.now()}-${i}` }));
+        // Return up to 20 unique rhyme questions for the batch
+        return shuffled.slice(0, 20).map((q, i) => ({ ...q, id: `rhyme-${Date.now()}-${i}` }));
     };
     return getFallback();
 };

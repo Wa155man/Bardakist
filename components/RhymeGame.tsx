@@ -180,8 +180,6 @@ export const RhymeGame: React.FC<RhymeGameProps> = ({ questions, onBack, onLoadM
             <button
               key={idx}
               onClick={() => handleOptionClick(opt)}
-              // Remove disabled attribute to allow audio click on speaker icon even if answered
-              // Logic for answering is handled inside handleOptionClick
               className={`
                 relative h-20 md:h-24 rounded-2xl border-b-4 text-2xl md:text-3xl font-bold font-dynamic shadow-lg transition-all duration-300
                 ${btnColor}
