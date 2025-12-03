@@ -10,16 +10,16 @@ const initializeGenAI = () => {
       return null;
   }
 
-  // Safely access environment variables to prevent startup crash
+  // Safely access environment variables to prevent startup crash on static hosts
   let apiKey = '';
   try {
-      // @ts-ignore - This is a common pattern for accessing env vars in different environments
+      // @ts-ignore
       if (typeof process !== 'undefined' && process.env) {
           // @ts-ignore
           apiKey = process.env.API_KEY;
       }
   } catch (e) {
-      // process is not defined
+      // process is not defined, which is expected on client-side bundles
   }
   
   if (!apiKey) {
@@ -130,7 +130,6 @@ const getTTSAudioBuffer = async (text: string): Promise<AudioBuffer | null> => {
           model: "gemini-2.5-flash-preview-tts",
           contents: [{ parts: [{ text: text }] }],
           config: {
-            // FIX: Use Modality.AUDIO enum instead of string "AUDIO".
             responseModalities: [Modality.AUDIO], 
             speechConfig: {
               voiceConfig: {
