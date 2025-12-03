@@ -1,4 +1,5 @@
-import { GoogleGenAI, Type } from "@google/genai";
+// FIX: Import Modality from @google/genai.
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { GameQuestion, VowelType, SentenceQuestion, RhymeQuestion, ReadingQuestion } from "../types";
 import { VOWEL_SPECIFIC_FALLBACKS, FALLBACK_TWISTERS, FALLBACK_SENTENCES, FALLBACK_SENTENCES_ENGLISH, FALLBACK_RHYMES, FALLBACK_HANGMAN_WORDS, FALLBACK_HANGMAN_WORDS_ENGLISH } from "../constants";
 
@@ -129,7 +130,8 @@ const getTTSAudioBuffer = async (text: string): Promise<AudioBuffer | null> => {
           model: "gemini-2.5-flash-preview-tts",
           contents: [{ parts: [{ text: text }] }],
           config: {
-            responseModalities: ["AUDIO"], 
+            // FIX: Use Modality.AUDIO enum instead of string "AUDIO".
+            responseModalities: [Modality.AUDIO], 
             speechConfig: {
               voiceConfig: {
                 prebuiltVoiceConfig: { voiceName: 'Aoede' },

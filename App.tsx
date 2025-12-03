@@ -159,16 +159,15 @@ export const App: React.FC = () => {
     setIsLoading(true);
     setScreen(ScreenState.GAME_SESSION); 
     try {
-      const generatedQuestions = await generateLevelContent(level.vowel);
+      const currentWords = questions.map(q => q.word);
+      const generatedQuestions = await generateLevelContent(level.vowel, currentWords);
       setQuestions(generatedQuestions);
       setNextQuestion(generatedQuestions.length > 1 ? generatedQuestions[1] : undefined);
       setCurrentQuestionIndex(0);
       if (generatedQuestions.length > 0) {
           const imgPromise = new Promise<void>((resolve) => {
               const firstImg = new Image();
-              // FIX: Wrap resolve in a function to match event handler signature
               firstImg.onload = () => resolve();
-              // FIX: Wrap resolve in a function to match event handler signature
               firstImg.onerror = () => resolve();
               firstImg.src = getMiniGameImageUrl(generatedQuestions[0].correctTranslation);
           });
@@ -284,7 +283,6 @@ export const App: React.FC = () => {
             const history = Array.from(hangmanHistory);
             const words = await generateHangmanWords('hebrew', history);
             setHangmanWords(words);
-            // FIX: Correctly update history by adding new words to the existing set
             const newHistory = new Set(hangmanHistory);
             words.forEach(w => newHistory.add(w.word));
             setHangmanHistory(newHistory);
@@ -315,7 +313,6 @@ export const App: React.FC = () => {
           const currentWords = questions.map(q => q.word);
           const newQuestions = await generateLevelContent(currentLevel.vowel, currentWords);
           if (newQuestions.length > 0) {
-                // FIX: Wrap resolve in a function to match event handler signature
                 const imgPromise = new Promise<void>(resolve => { const img = new Image(); img.onload = () => resolve(); img.onerror = () => resolve(); img.src = getMiniGameImageUrl(newQuestions[0].correctTranslation); });
                 await Promise.race([imgPromise, new Promise<void>(resolve => setTimeout(resolve, 1000))]);
                 newQuestions.slice(1).forEach(q => { new Image().src = getMiniGameImageUrl(q.correctTranslation); });
@@ -326,7 +323,6 @@ export const App: React.FC = () => {
       } catch (e) { console.error(e); } finally { setIsLoading(false); }
   };
 
-  // FIX: Make function async to allow await
   const handleCorrectAnswer = async () => {
     handleEarnPoints(3);
     if (currentQuestionIndex < questions.length - 1) {
@@ -373,6 +369,8 @@ export const App: React.FC = () => {
 
       {screen === ScreenState.GAME_SESSION && currentLevel && questions[currentQuestionIndex] && (
         <div className="h-full w-full bg-indigo-50 pt-14 md:pt-20 relative overflow-hidden flex flex-col">
+           <div className="absolute -left-10 top-20 w-40 h-40 bg-yellow-300 rounded-full opacity-50 mix-blend-multiply filter blur-xl animate-blob"></div>
+           <div className="absolute -right-10 top-40 w-40 h-40 bg-purple-300 rounded-full opacity-50 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
            <div className="container mx-auto px-4 relative z-10 flex-1 flex flex-col">
              <div className="text-center mb-1 md:mb-2 shrink-0">
                <h1 className="text-xl md:text-2xl font-bold text-gray-700">{currentLevel.name}</h1>
