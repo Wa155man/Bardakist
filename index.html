@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
   <head>
@@ -123,28 +122,27 @@
         100% { transform: rotate(360deg); }
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0"
-  }
-}
-</script>
-  <!-- Register Service Worker -->
-  <script type="module">
+  
+  <!-- Register Service Worker (Optional for PWA) -->
+  <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // Use relative path to avoid origin mismatch issues in sandboxed environments.
-        // We catch errors to ensure a service worker failure doesn't halt the app.
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Service Worker registered successfully'))
-          .catch(err => console.log('Service Worker registration skipped (harmless in preview):', err));
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed:', err));
       });
     }
   </script>
+<script type="importmap">
+{
+  "imports": {
+    "vite": "https://aistudiocdn.com/vite@^7.2.6",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/"
+  }
+}
+</script>
 </head>
   <body>
     <div id="root">
