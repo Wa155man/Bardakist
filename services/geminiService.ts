@@ -1,8 +1,10 @@
 
+// ... existing imports ...
 import { GoogleGenAI, Type } from "@google/genai";
 import { GameQuestion, VowelType, SentenceQuestion, RhymeQuestion, ReadingQuestion } from "../types";
 import { VOWEL_SPECIFIC_FALLBACKS, FALLBACK_TWISTERS, FALLBACK_SENTENCES, FALLBACK_SENTENCES_ENGLISH, FALLBACK_RHYMES, FALLBACK_HANGMAN_WORDS, FALLBACK_HANGMAN_WORDS_ENGLISH, FALLBACK_READING_QUESTIONS, FALLBACK_READING_QUESTIONS_ENGLISH } from "../constants";
 
+// ... existing initializeGenAI ...
 const initializeGenAI = () => {
   // Safe check for offline mode
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -45,7 +47,7 @@ const initializeGenAI = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-// Helper to handle API errors gracefully
+// ... existing handleGeminiError ...
 const handleGeminiError = (error: any, context: string) => {
     const msg = error?.message || error?.toString() || "";
     if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || error?.status === 'RESOURCE_EXHAUSTED') {
@@ -57,6 +59,7 @@ const handleGeminiError = (error: any, context: string) => {
     }
 };
 
+// ... existing blobToBase64 ...
 const blobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -70,7 +73,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
 };
 
 // --- Audio Helpers for TTS ---
-
+// ... existing Audio Helpers ...
 let audioContext: AudioContext | null = null;
 
 function getAudioContext() {
@@ -124,6 +127,7 @@ async function decodeAudioData(
 }
 
 // --- TTS Caching & Prefetching ---
+// ... existing TTS logic ...
 const ttsCache = new Map<string, AudioBuffer>();
 const pendingTTS = new Map<string, Promise<AudioBuffer | null>>();
 
@@ -256,7 +260,7 @@ export const playTextToSpeech = async (text: string) => {
   }
 };
 
-// --- Image Helpers ---
+// ... existing Image Helpers ...
 export const getMiniGameImageUrl = (englishWord: string): string => {
   const term = englishWord.trim();
   return `https://image.pollinations.ai/prompt/cartoon%20${encodeURIComponent(term)}?width=300&height=300&model=flux&nologo=true&seed=${encodeURIComponent(term)}`;
@@ -268,7 +272,7 @@ export const getHangmanImageUrl = (hint: string): string => {
 };
 
 // --- Content Generators ---
-
+// ... existing Content Generators ...
 export const generateLevelContent = async (vowel: VowelType, excludeWords: string[] = []): Promise<GameQuestion[]> => {
   const specificQuestions = VOWEL_SPECIFIC_FALLBACKS[vowel] || VOWEL_SPECIFIC_FALLBACKS[VowelType.KAMATZ];
   const available = specificQuestions.filter(q => !excludeWords.includes(q.word));
@@ -306,35 +310,33 @@ export const generateHangmanWords = async (language: 'hebrew' | 'english' = 'heb
 
 export const generateRhymeQuestions = async (excludeWords: string[] = []): Promise<RhymeQuestion[]> => {
     const getFallback = () => {
-        // Filter out recent words to ensure uniqueness in current set
         let available = FALLBACK_RHYMES.filter(q => !excludeWords.includes(q.targetWord));
-        
-        // RECYCLE: If we ran out of unique rhymes (or low on them), reset and use the full list again
         if (available.length < 5) {
             available = FALLBACK_RHYMES;
         }
-
         const shuffled = [...available].sort(() => 0.5 - Math.random());
-        // Return up to 20 unique rhyme questions for the batch
         return shuffled.slice(0, 20).map((q, i) => ({ ...q, id: `rhyme-${Date.now()}-${i}` }));
     };
     return getFallback();
 };
 
+// UPDATED: Now supports fetching multiple random questions without repetition
 export const generateReadingQuestions = async (excludeIds: string[] = [], language: 'hebrew' | 'english' = 'hebrew'): Promise<ReadingQuestion[]> => {
-    // Select source based on language
+    // 1. Select source based on language
     const sourceList = language === 'english' ? FALLBACK_READING_QUESTIONS_ENGLISH : FALLBACK_READING_QUESTIONS;
 
-    // Filter out previously seen questions
+    // 2. Filter out questions that have already been played in this session (excludeIds)
     const available = sourceList.filter(q => !excludeIds.includes(q.id));
     
-    // If all used, recycle from full list to prevent empty state
-    const source = available.length > 0 ? available : sourceList;
+    // 3. If we've run out of unique questions, reset and use the full list
+    const pool = available.length > 0 ? available : sourceList;
     
-    // Pick one random story
-    const random = source[Math.floor(Math.random() * source.length)];
+    // 4. Shuffle the pool completely
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
     
-    return [random];
+    // 5. Return a batch (e.g., 5 at a time) to allow the game to flow
+    // The Game Component will append these to its state.
+    return shuffled.slice(0, 5);
 };
 
 export const generateTongueTwister = async (): Promise<{hebrew: string, english: string}> => {
