@@ -10,6 +10,17 @@ const initializeGenAI = () => {
       return null;
   }
 
+  // 1. Check LocalStorage (User provided key for static hosting/GitHub Pages)
+  try {
+    const userKey = localStorage.getItem('user_api_key');
+    if (userKey && userKey.trim().length > 0) {
+      return new GoogleGenAI({ apiKey: userKey.trim() });
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+
+  // 2. Check Environment Variables
   let apiKey = '';
   try {
       // Safe access to process.env.API_KEY avoiding ReferenceErrors
@@ -17,12 +28,18 @@ const initializeGenAI = () => {
           // @ts-ignore
           apiKey = process.env.API_KEY || '';
       }
+      // Support Vite/Modern build tools if process is missing but import.meta exists
+      // @ts-ignore
+      else if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+          // @ts-ignore
+          apiKey = import.meta.env.VITE_API_KEY;
+      }
   } catch (e) {
       // Ignore env access errors
   }
   
   if (!apiKey) {
-    console.warn("API_KEY is missing. Using fallback data.");
+    console.warn("API_KEY is missing. App running in fallback mode. (Configure key in Settings for AI features)");
     return null;
   }
   return new GoogleGenAI({ apiKey });

@@ -11,7 +11,7 @@ interface SettingsModalProps {
   onResetProgress: () => void;
   onLoadProgress: (progress: UserProgress) => void;
   onResetScore: () => void;
-  pets?: PetProfile[]; // Added pets prop
+  pets?: PetProfile[];
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
@@ -28,9 +28,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [sfx, setSfx] = useState(settings.soundEffects);
   const [autoPlay, setAutoPlay] = useState(settings.autoPlayAudio);
   const [selectedPet, setSelectedPet] = useState(settings.selectedPetId || 'guri');
+  const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('user_api_key') || '');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
+    // Save API Key to local storage separately
+    if (userApiKey.trim()) {
+        localStorage.setItem('user_api_key', userApiKey.trim());
+    } else {
+        localStorage.removeItem('user_api_key');
+    }
+
     onSave({
       childName: name,
       soundEffects: sfx,
@@ -121,6 +130,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="w-full p-4 rounded-xl border-2 border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-200 outline-none text-xl font-dynamic text-right"
               dir="rtl"
             />
+          </div>
+
+           {/* API Key Input (New for GitHub Pages support) */}
+           <div className="space-y-2">
+            <label className="block text-slate-600 font-bold text-lg font-dynamic">
+                Gemini API Key 
+                <span className="text-xs text-slate-400 font-normal ml-2">(Optional for AI Voices)</span>
+            </label>
+            <input 
+              type="password" 
+              value={userApiKey}
+              onChange={(e) => setUserApiKey(e.target.value)}
+              placeholder="Paste your key here..."
+              className="w-full p-3 rounded-xl border-2 border-slate-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 outline-none text-sm font-mono text-slate-600"
+            />
+            <p className="text-xs text-slate-400">
+                Required for high-quality TTS on static hosting.
+            </p>
           </div>
 
           {/* Pet Selection in Settings */}
