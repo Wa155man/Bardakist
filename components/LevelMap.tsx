@@ -28,9 +28,9 @@ export const LevelMap: React.FC<LevelMapProps> = ({ onSelectLevel, onQuickPlay, 
       />
 
       {/* Title */}
-      <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-10 text-center w-full pointer-events-none">
+      <div className="absolute top-16 md:top-12 left-1/2 transform -translate-x-1/2 z-10 text-center w-full pointer-events-none">
         <h1 
-          className="text-5xl font-black text-yellow-400 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] font-dynamic tracking-wide"
+          className="text-4xl md:text-5xl font-black text-yellow-400 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] font-dynamic tracking-wide"
           style={{ WebkitTextStroke: '2px #166534' }}
         >
           הַמַּסָּע שֶׁלִּי
@@ -93,7 +93,7 @@ export const LevelMap: React.FC<LevelMapProps> = ({ onSelectLevel, onQuickPlay, 
             
             {/* Main Node Circle */}
             <div className={`
-              w-24 h-24 rounded-full border-[6px] border-white shadow-2xl flex flex-col items-center justify-center
+              w-20 h-20 md:w-24 md:h-24 rounded-full border-[6px] border-white shadow-2xl flex flex-col items-center justify-center
               ${level.color} relative overflow-hidden transform transition-transform
             `}>
                {/* Glossy Effect */}
@@ -106,7 +106,7 @@ export const LevelMap: React.FC<LevelMapProps> = ({ onSelectLevel, onQuickPlay, 
                
                {/* Number if unlocked */}
                {level.unlocked && (
-                  <div className="text-white font-black text-5xl drop-shadow-md z-10 font-dynamic">
+                  <div className="text-white font-black text-4xl md:text-5xl drop-shadow-md z-10 font-dynamic">
                     {level.id}
                   </div>
                )}
@@ -123,7 +123,7 @@ export const LevelMap: React.FC<LevelMapProps> = ({ onSelectLevel, onQuickPlay, 
       {/* Controls - Split Layout to clear center */}
       
       {/* Quick Play (Left) */}
-      <div className="absolute bottom-8 left-4 pointer-events-auto z-[100]">
+      <div className="absolute bottom-6 left-4 md:bottom-8 md:left-8 pointer-events-auto z-[100]">
           <button 
             type="button"
             onClick={(e) => {
@@ -133,39 +133,39 @@ export const LevelMap: React.FC<LevelMapProps> = ({ onSelectLevel, onQuickPlay, 
             }}
             className="group relative cursor-pointer hover:scale-110 transition-transform duration-300"
           >
-             <div className="w-28 h-28 relative animate-float">
+             <div className="w-24 h-24 md:w-28 md:h-28 relative animate-float">
                 {/* Character Body */}
-                <div className="w-20 h-20 bg-red-500 rounded-2xl relative shadow-xl border-b-4 border-red-700 mx-auto flex items-center justify-center">
-                    <span className="text-4xl">🎲</span>
+                <div className="w-16 h-16 md:w-20 md:h-20 bg-red-500 rounded-2xl relative shadow-xl border-b-4 border-red-700 mx-auto flex items-center justify-center">
+                    <span className="text-3xl md:text-4xl">🎲</span>
                 </div>
                 
                 {/* Speech Bubble */}
-                <div className="bg-white px-3 py-1 rounded-xl shadow-md absolute -top-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap border-2 border-gray-100">
-                    <p className="text-sm font-bold text-gray-800 font-dynamic">Play</p>
+                <div className="bg-white px-3 py-1 rounded-xl shadow-md absolute -top-8 md:-top-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap border-2 border-gray-100">
+                    <p className="text-xs md:text-sm font-bold text-gray-800 font-dynamic">Play</p>
                     <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 rotate-45 w-3 h-3 bg-white border-r-2 border-b-2 border-gray-100"></div>
                 </div>
              </div>
           </button>
       </div>
 
-      {/* Mini Games & Fun Zone (Right) - Moved UP to avoid blocking Level 1 */}
-      <div className="absolute bottom-40 right-4 flex gap-4 pointer-events-auto z-[100]">
-        <div className="flex items-end gap-4">
+      {/* Mini Games & Fun Zone (Right) */}
+      <div className="absolute bottom-28 right-4 md:bottom-40 md:right-8 flex gap-3 md:gap-4 pointer-events-auto z-[100]">
+        <div className="flex flex-col md:flex-row items-end gap-3 md:gap-4">
            {/* Mini Games */}
            <button 
               onClick={onOpenMiniPractice}
               className="group relative cursor-pointer hover:scale-105 transition-transform duration-300"
             >
-               <div className="bg-blue-500 text-white p-3 rounded-2xl shadow-xl border-b-4 border-blue-700 flex flex-col items-center gap-1 w-20">
+               <div className="bg-blue-500 text-white p-2 md:p-3 rounded-2xl shadow-xl border-b-4 border-blue-700 flex flex-col items-center gap-1 w-16 md:w-20">
                   <div className="grid grid-cols-2 gap-1 mb-1 opacity-80">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full"></div>
+                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full"></div>
+                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full"></div>
+                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full"></div>
                   </div>
                   <div className="flex flex-col text-center">
-                     <span className="font-black text-3xl leading-none font-dynamic">🎮</span>
-                     <span className="text-[10px] font-bold text-blue-100 mt-1 font-dynamic">GAMES</span>
+                     <span className="font-black text-2xl md:text-3xl leading-none font-dynamic">🎮</span>
+                     <span className="text-[9px] md:text-[10px] font-bold text-blue-100 mt-1 font-dynamic">GAMES</span>
                   </div>
                </div>
             </button>
@@ -175,10 +175,10 @@ export const LevelMap: React.FC<LevelMapProps> = ({ onSelectLevel, onQuickPlay, 
               onClick={onOpenTongueTwisters}
               className="group relative cursor-pointer hover:scale-105 transition-transform duration-300"
             >
-               <div className="bg-purple-600 text-white p-3 rounded-2xl shadow-xl border-b-4 border-purple-800 flex flex-col items-center gap-1 w-20">
-                  <span className="text-3xl mb-1">🤪</span>
+               <div className="bg-purple-600 text-white p-2 md:p-3 rounded-2xl shadow-xl border-b-4 border-purple-800 flex flex-col items-center gap-1 w-16 md:w-20">
+                  <span className="text-2xl md:text-3xl mb-1">🤪</span>
                   <div className="flex flex-col text-center">
-                     <span className="text-[10px] font-bold text-purple-100 font-dynamic">FUN ZONE</span>
+                     <span className="text-[9px] md:text-[10px] font-bold text-purple-100 font-dynamic">FUN ZONE</span>
                   </div>
                </div>
             </button>

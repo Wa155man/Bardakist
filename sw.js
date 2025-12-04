@@ -6,7 +6,8 @@ const DYNAMIC_CACHE_NAME = 'bardakist-dynamic-v1';
 const STATIC_ASSETS = [
   './', 
   './index.html',
-  './index.tsx',
+  // Removed explicit JS/TS file references to prevent caching errors in build environments.
+  // The service worker will cache assets dynamically as they are fetched.
   'https://cdn.tailwindcss.com',
 ];
 
@@ -60,8 +61,6 @@ self.addEventListener('fetch', (event) => {
                 return networkResponse;
             }).catch(error => {
                 console.warn('Network request failed for:', event.request.url);
-                // When offline, if a resource is not in cache, the fetch will fail.
-                // The browser will show the default network error page, which is expected.
                 throw error;
             });
         })

@@ -402,7 +402,8 @@ export const App: React.FC = () => {
   const showTopBar = ([ScreenState.LEVEL_SELECT, ScreenState.GAME_SESSION] as ScreenState[]).includes(screen);
 
   return (
-    <div className="relative w-[95vw] h-[95dvh] max-h-[100dvh] bg-white rounded-[2rem] shadow-2xl overflow-hidden border-[8px] border-slate-800 ring-4 ring-slate-900/50 select-none flex flex-col mx-auto my-auto">
+    // UPDATED: Full screen on mobile, Framed on Desktop
+    <div className="relative w-full h-[100dvh] md:w-[95vw] md:h-[95dvh] md:max-h-[100dvh] md:max-w-[1400px] bg-white md:rounded-[2rem] shadow-2xl overflow-hidden md:border-[8px] border-slate-800 md:ring-4 ring-slate-900/50 select-none flex flex-col mx-auto my-auto transition-all duration-300">
       {showTopBar && <TopBar progress={userProgress} onHome={handleBackToMap} onOpenSettings={() => setIsSettingsOpen(true)} />}
       
       {screen === ScreenState.PET_SELECTION && <PetSelection onSelect={handlePetSelection} />}
@@ -421,14 +422,14 @@ export const App: React.FC = () => {
       {screen === ScreenState.SNOWMAN_GAME && !isLoading && <SnowmanGame questions={sentenceQuestions} onComplete={handleSnowmanComplete} onBack={() => { if (returnScreen === ScreenState.LEVEL_SELECT) { handleBackToMap(); } else { handleBackToMiniPractice(); } }} onLoadMore={handleLoadMoreSentences} onStartGame={handleSentenceGameStart} settings={settings} onEarnPoints={handleEarnPoints} language={snowmanLanguage} />}
 
       {isLoading && (
-        <div className="flex flex-col items-center justify-center h-full bg-green-50 rounded-[2.5rem]">
+        <div className="flex flex-col items-center justify-center h-full bg-green-50 md:rounded-[2.5rem]">
           <div className="w-24 h-24 border-8 border-green-200 border-t-green-500 rounded-full animate-spin mb-4"></div>
           <h2 className="text-3xl font-bold text-green-700 animate-pulse">...טוען</h2>
         </div>
       )}
 
       {screen === ScreenState.GAME_SESSION && currentLevel && questions[currentQuestionIndex] && (
-        <div className="h-full w-full bg-indigo-50 pt-14 md:pt-20 relative overflow-hidden flex flex-col">
+        <div className="h-full w-full bg-indigo-50 pt-16 md:pt-20 relative overflow-hidden flex flex-col">
            <div className="container mx-auto px-4 relative z-10 flex-1 flex flex-col">
              <div className="text-center mb-1 md:mb-2 shrink-0">
                <h1 className="text-xl md:text-2xl font-bold text-gray-700">{currentLevel.name}</h1>
@@ -459,7 +460,7 @@ export const App: React.FC = () => {
       {isSettingsOpen && <SettingsModal settings={settings} userProgress={userProgress} onSave={handleSaveSettings} onClose={() => setIsSettingsOpen(false)} onResetProgress={handleResetProgress} onLoadProgress={handleLoadProgress} onResetScore={handleResetScore} pets={PETS} />}
       
       <FontControl currentFont={settings.fontStyle} onChange={(f) => handleSaveSettings({...settings, fontStyle: f})} />
-      <button onClick={() => setIsSettingsOpen(true)} className={`absolute z-[200] bg-white/90 p-3 rounded-full shadow-md border-2 border-gray-200 hover:rotate-90 transition-transform duration-300 ${screen === ScreenState.HANGMAN_GAME ? 'top-4 right-4' : 'bottom-4 right-4'}`} title="הגדרות">
+      <button onClick={() => setIsSettingsOpen(true)} className={`absolute z-[200] bg-white/90 p-3 rounded-full shadow-md border-2 border-gray-200 hover:rotate-90 transition-transform duration-300 ${screen === ScreenState.HANGMAN_GAME ? 'top-4 right-4 md:top-8 md:right-8' : 'bottom-4 right-4 md:bottom-8 md:right-8'}`} title="הגדרות">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
       </button>
     </div>
