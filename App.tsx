@@ -20,7 +20,6 @@ import { DictationGame } from './components/DictationGame';
 import { FontControl } from './components/FontControl';
 import { RewardOverlay } from './components/RewardOverlay'; 
 import { PetSelection } from './components/PetSelection'; 
-import { ErrorBoundary } from './components/ErrorBoundary';
 import { ScreenState, LevelNode, UserProgress, GameQuestion, AppSettings, SentenceQuestion, RhymeQuestion, ReadingQuestion, GuriReward, PetProfile } from './types';
 import { generateLevelContent, generateSentenceQuestions, generateHangmanWords, generateRhymeQuestions, generateReadingQuestions, getMiniGameImageUrl, getHangmanImageUrl, resumeAudioContext } from './services/geminiService';
 import { LEVEL_NODES, GURI_REWARDS, PETS } from './constants';
@@ -403,7 +402,6 @@ export const App: React.FC = () => {
   const showTopBar = ([ScreenState.LEVEL_SELECT, ScreenState.GAME_SESSION] as ScreenState[]).includes(screen);
 
   return (
-    <ErrorBoundary>
     <div className="relative w-[95vw] h-[95dvh] max-h-[100dvh] bg-white rounded-[2rem] shadow-2xl overflow-hidden border-[8px] border-slate-800 ring-4 ring-slate-900/50 select-none flex flex-col mx-auto my-auto">
       {showTopBar && <TopBar progress={userProgress} onHome={handleBackToMap} onOpenSettings={() => setIsSettingsOpen(true)} />}
       
@@ -465,6 +463,5 @@ export const App: React.FC = () => {
         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
       </button>
     </div>
-    </ErrorBoundary>
   );
 };

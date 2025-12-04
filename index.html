@@ -109,6 +109,19 @@
       .animation-delay-2000 {
         animation-delay: 2s;
       }
+      /* Loading Spinner for initial load */
+      .initial-loader {
+        border: 8px solid #f3f3f3;
+        border-top: 8px solid #fcd34d;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
   <script type="importmap">
 {
@@ -134,7 +147,13 @@
   </script>
 </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+        <!-- Initial Loading State to show before React mounts -->
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #1e293b; color: white; font-family: sans-serif;">
+            <div class="initial-loader"></div>
+            <h2 style="margin-top: 20px; font-weight: bold;">Loading Bardakist...</h2>
+        </div>
+    </div>
     <script type="module" src="./index.tsx"></script>
   </body>
 </html>
