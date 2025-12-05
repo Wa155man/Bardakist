@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { ReadingQuestion } from '../types';
-import { playTextToSpeech } from '../services/geminiService';
+import { playTextToSpeech, prefetchTTS } from '../services/geminiService';
 
 interface ReadingGameProps {
   questions: ReadingQuestion[];
@@ -24,6 +24,19 @@ export const ReadingGame: React.FC<ReadingGameProps> = ({ questions, onBack, onG
   const [isLoadingNext, setIsLoadingNext] = useState(false);
 
   const currentQ = questions[currentIndex];
+
+  // Prefetch audio for current and next questions to minimize lag
+  useEffect(() => {
+      if (currentQ) {
+          // Prefetch current
+          prefetchTTS(currentQ.passage);
+          // Prefetch next if available
+          const nextQ = questions[currentIndex + 1];
+          if (nextQ) {
+              prefetchTTS(nextQ.passage);
+          }
+      }
+  }, [currentQ, currentIndex, questions]);
 
   useEffect(() => {
     setIsAnswered(false);

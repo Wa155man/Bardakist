@@ -32,29 +32,32 @@ export const App: React.FC = () => {
   const [nextQuestion, setNextQuestion] = useState<GameQuestion | undefined>(undefined);
 
   const [sentenceQuestions, setSentenceQuestions] = useState<SentenceQuestion[]>([]);
-  const [hangmanWords, setHangmanWords] = useState<{word: string, hint: string, hebrewHint: string, imagePrompt: string}[]>([]);
-  const [hangmanHistory, setHangmanHistory] = useState<Set<string>>(() => {
-// FIX: Cast result of JSON.parse to string[] to ensure correct type for Set.
-      try { const saved = localStorage.getItem('hangmanHistory'); return saved ? new Set(JSON.parse(saved) as string[]) : new Set(); } catch (e) { return new Set(); }
+  const [sentenceHistory, setSentenceHistory] = useState<Set<string>>(() => {
+      try { const saved = localStorage.getItem('sentenceHistory'); return saved ? new Set(JSON.parse(saved) as string[]) : new Set(); } catch (e) { return new Set(); }
   });
 
-  useEffect(() => { localStorage.setItem('hangmanHistory', JSON.stringify(Array.from(hangmanHistory))); }, [hangmanHistory]);
+  const [hangmanWords, setHangmanWords] = useState<{word: string, hint: string, hebrewHint: string, imagePrompt: string}[]>([]);
+  const [hangmanHistory, setHangmanHistory] = useState<Set<string>>(() => {
+      try { const saved = localStorage.getItem('hangmanHistory'); return saved ? new Set(JSON.parse(saved) as string[]) : new Set(); } catch (e) { return new Set(); }
+  });
   
   const [rhymeQuestions, setRhymeQuestions] = useState<RhymeQuestion[]>([]);
-  const [rhymeHistory, setRhymeHistory] = useState<Set<string>>(new Set());
-  const [isLoadingRhymes, setIsLoadingRhymes] = useState(false);
+  const [rhymeHistory, setRhymeHistory] = useState<Set<string>>(() => {
+      try { const saved = localStorage.getItem('rhymeHistory'); return saved ? new Set(JSON.parse(saved) as string[]) : new Set(); } catch (e) { return new Set(); }
+  });
 
   const [readingQuestions, setReadingQuestions] = useState<ReadingQuestion[]>([]);
+  const [readingHistory, setReadingHistory] = useState<Set<string>>(() => {
+      try { const saved = localStorage.getItem('readingHistory'); return saved ? new Set(JSON.parse(saved) as string[]) : new Set(); } catch (e) { return new Set(); }
+  });
+
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingRhymes, setIsLoadingRhymes] = useState(false);
+  
   const [snowmanLanguage, setSnowmanLanguage] = useState<'hebrew' | 'english'>('hebrew');
   const [hangmanLanguage, setHangmanLanguage] = useState<'hebrew' | 'english'>('hebrew');
   const [currentReward, setCurrentReward] = useState<GuriReward | null>(null);
-
-  const [sentenceHistory, setSentenceHistory] = useState<Set<string>>(() => {
-// FIX: Cast result of JSON.parse to string[] to ensure correct type for Set.
-      try { const saved = localStorage.getItem('sentenceHistory'); return saved ? new Set(JSON.parse(saved) as string[]) : new Set(); } catch (e) { return new Set(); }
-  });
 
   // UNLOCK AUDIO CONTEXT ON FIRST INTERACTION
   useEffect(() => {
@@ -76,7 +79,11 @@ export const App: React.FC = () => {
     };
   }, []);
 
+  // Persist Histories
   useEffect(() => { localStorage.setItem('sentenceHistory', JSON.stringify(Array.from(sentenceHistory))); }, [sentenceHistory]);
+  useEffect(() => { localStorage.setItem('hangmanHistory', JSON.stringify(Array.from(hangmanHistory))); }, [hangmanHistory]);
+  useEffect(() => { localStorage.setItem('rhymeHistory', JSON.stringify(Array.from(rhymeHistory))); }, [rhymeHistory]);
+  useEffect(() => { localStorage.setItem('readingHistory', JSON.stringify(Array.from(readingHistory))); }, [readingHistory]);
 
   const [userProgress, setUserProgress] = useState<UserProgress>(() => {
     try {
@@ -182,6 +189,7 @@ export const App: React.FC = () => {
     setIsLoading(true);
     setScreen(ScreenState.GAME_SESSION); 
     try {
+      // Use basic random selection for level content, not strictly history-bound to allow mastery repetition
       const generatedQuestions = await generateLevelContent(level.vowel);
       setQuestions(generatedQuestions);
       setNextQuestion(generatedQuestions.length > 1 ? generatedQuestions[1] : undefined);
@@ -219,7 +227,6 @@ export const App: React.FC = () => {
       setIsLoading(true);
       setSnowmanLanguage(language);
       try {
-// FIX: Explicitly type historyArray as string[] to avoid type errors.
           const historyArray: string[] = Array.from(sentenceHistory);
           const data = await generateSentenceQuestions(language, historyArray);
           const newHistory = new Set(sentenceHistory);
@@ -231,7 +238,6 @@ export const App: React.FC = () => {
 
   const handleLoadMoreSentences = async (language: 'hebrew' | 'english') => {
     try {
-// FIX: Explicitly type historyArray as string[] to avoid type errors.
       const historyArray: string[] = Array.from(sentenceHistory);
       const newQuestions = await generateSentenceQuestions(language, historyArray);
       const newHistory = new Set(sentenceHistory);
@@ -243,19 +249,19 @@ export const App: React.FC = () => {
 
   const handleOpenMiniPractice = () => { setScreen(ScreenState.MINI_PRACTICE_SELECT); };
 
-  // New function to start hangman with specific language (resets list)
   const handleStartHangman = async (language: 'hebrew' | 'english') => {
       setIsLoading(true);
       setHangmanLanguage(language);
       try {
-          const newWords = await generateHangmanWords(language, []); // Start fresh ignoring history for simplicity on switch
-          setHangmanWords(newWords);
-          
-          const newHistory = new Set<string>(); // Reset history to avoid mixing languages
+          // Pass current history to avoid repeating even on start if not cleared
+          const historyArray: string[] = Array.from(hangmanHistory);
+          const newWords = await generateHangmanWords(language, historyArray);
+          const newHistory = new Set(hangmanHistory);
           newWords.forEach(w => newHistory.add(w.word));
           setHangmanHistory(newHistory);
           
-          // Preload images
+          setHangmanWords(newWords);
+          
           newWords.forEach(w => { 
               const imgPrompt = w.imagePrompt || w.hint;
               new Image().src = getHangmanImageUrl(imgPrompt); 
@@ -269,9 +275,8 @@ export const App: React.FC = () => {
 
   const handleLoadMoreHangman = async (language: 'hebrew' | 'english') => {
       try {
-// FIX: Explicitly type currentHistory as string[] to avoid type errors.
-          const currentHistory: string[] = Array.from(hangmanHistory);
-          const newWords = await generateHangmanWords(language, currentHistory);
+          const historyArray: string[] = Array.from(hangmanHistory);
+          const newWords = await generateHangmanWords(language, historyArray);
           const newHistory = new Set(hangmanHistory);
           newWords.forEach(w => newHistory.add(w.word));
           setHangmanHistory(newHistory);
@@ -288,9 +293,8 @@ export const App: React.FC = () => {
     if (isLoadingRhymes) return;
     setIsLoadingRhymes(true);
     try {
-// FIX: Explicitly type history as string[] to avoid type errors.
-        const history: string[] = Array.from(rhymeHistory);
-        const newQuestions = await generateRhymeQuestions(history);
+        const historyArray: string[] = Array.from(rhymeHistory);
+        const newQuestions = await generateRhymeQuestions(historyArray);
         const newHistory = new Set(rhymeHistory);
         newQuestions.forEach(q => newHistory.add(q.targetWord));
         setRhymeHistory(newHistory);
@@ -298,7 +302,6 @@ export const App: React.FC = () => {
     } catch (e) { console.error(e); } finally { setIsLoadingRhymes(false); }
   };
 
-  // FIX: Added async keyword to handle await expressions inside the function.
   const handleMiniPracticeSelect = async (optionId: string) => {
     const tutorials: Record<string, TutorialStep[]> = {
       matching: [{ message: "התאימו בין אות בכתב יד לאות בדפוס." }],
@@ -335,15 +338,21 @@ export const App: React.FC = () => {
         setIsLoading(true);
         try {
           if (optionId === 'hangman') {
-            await handleStartHangman('hebrew'); // Start with Hebrew by default and reset list
+            await handleStartHangman('hebrew'); 
           } else if (optionId === 'rhymes') {
-// FIX: Explicitly type history as string[] to avoid type errors.
-            const history: string[] = Array.from(rhymeHistory);
-            const data = await generateRhymeQuestions(history);
+            const historyArray: string[] = Array.from(rhymeHistory);
+            const data = await generateRhymeQuestions(historyArray);
+            const newHistory = new Set(rhymeHistory);
+            data.forEach(q => newHistory.add(q.targetWord));
+            setRhymeHistory(newHistory);
             setRhymeQuestions(data);
-            setRhymeHistory(new Set(data.map(q=>q.targetWord)));
           } else if (optionId === 'reading') {
-            setReadingQuestions(await generateReadingQuestions([], 'hebrew')); // Initialize with Hebrew
+            const historyArray: string[] = Array.from(readingHistory);
+            const data = await generateReadingQuestions(historyArray, 'hebrew');
+            const newHistory = new Set(readingHistory);
+            data.forEach(q => newHistory.add(q.id));
+            setReadingHistory(newHistory);
+            setReadingQuestions(data);
           }
         } catch (e) { console.error(e); } finally { setIsLoading(false); }
       }
@@ -352,14 +361,19 @@ export const App: React.FC = () => {
   
   const handleReadingGameAction = async (action: 'more' | 'restart', language: 'hebrew' | 'english' = 'hebrew') => {
     try { 
+      // Always pass history to ensure non-repetition
+      const historyArray: string[] = Array.from(readingHistory);
+      const moreQuestions = await generateReadingQuestions(historyArray, language);
+      
+      const newHistory = new Set(readingHistory);
+      moreQuestions.forEach(q => newHistory.add(q.id));
+      setReadingHistory(newHistory);
+
       if (action === 'restart') {
           setIsLoading(true);
-          const newQs = await generateReadingQuestions([], language);
-          setReadingQuestions(newQs);
+          setReadingQuestions(moreQuestions);
           setIsLoading(false);
       } else {
-          const currentIds = readingQuestions.map(q => q.id);
-          const moreQuestions = await generateReadingQuestions(currentIds, language);
           setReadingQuestions(prev => [...prev, ...moreQuestions]); 
       }
     } catch (e) { console.error(e); setIsLoading(false); }

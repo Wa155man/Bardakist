@@ -1,62 +1,43 @@
-
 // ... existing imports ...
 import { GoogleGenAI, Type } from "@google/genai";
 import { GameQuestion, VowelType, SentenceQuestion, RhymeQuestion, ReadingQuestion } from "../types";
 import { VOWEL_SPECIFIC_FALLBACKS, FALLBACK_TWISTERS, FALLBACK_SENTENCES, FALLBACK_SENTENCES_ENGLISH, FALLBACK_RHYMES, FALLBACK_HANGMAN_WORDS, FALLBACK_HANGMAN_WORDS_ENGLISH, FALLBACK_READING_QUESTIONS, FALLBACK_READING_QUESTIONS_ENGLISH } from "../constants";
 
-// ... existing initializeGenAI ...
+// ... existing initializeGenAI, handleGeminiError, blobToBase64, Audio Helpers ...
+
 const initializeGenAI = () => {
   // Safe check for offline mode
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      console.warn("Offline. Using fallback data.");
       return null;
   }
 
-  // 1. Check LocalStorage (User provided key for static hosting/GitHub Pages)
+  // 1. Check LocalStorage (User provided key)
   try {
     const userKey = localStorage.getItem('user_api_key');
     if (userKey && userKey.trim().length > 0) {
       return new GoogleGenAI({ apiKey: userKey.trim() });
     }
-  } catch (e) {
-    // Ignore storage errors
-  }
+  } catch (e) {}
 
   // 2. Check Environment Variables
   let apiKey = '';
   try {
-      // Safe access to process.env.API_KEY avoiding ReferenceErrors
       if (typeof process !== 'undefined' && process.env) {
           // @ts-ignore
           apiKey = process.env.API_KEY || '';
       }
-      // Support Vite/Modern build tools if process is missing but import.meta exists
-      // @ts-ignore
-      else if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
-          // @ts-ignore
-          apiKey = import.meta.env.VITE_API_KEY;
+      else if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_KEY) {
+          apiKey = (import.meta as any).env.VITE_API_KEY;
       }
-  } catch (e) {
-      // Ignore env access errors
-  }
+  } catch (e) {}
   
-  if (!apiKey) {
-    console.warn("API_KEY is missing. App running in fallback mode. (Configure key in Settings for AI features)");
-    return null;
-  }
+  if (!apiKey) return null;
   return new GoogleGenAI({ apiKey });
 };
 
 // ... existing handleGeminiError ...
 const handleGeminiError = (error: any, context: string) => {
-    const msg = error?.message || error?.toString() || "";
-    if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || error?.status === 'RESOURCE_EXHAUSTED') {
-        console.warn(`Gemini Quota Exceeded in [${context}]. Switching to fallback/offline mode.`);
-    } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-        console.warn(`Network Error in [${context}]. Switching to fallback.`);
-    } else {
-        console.error(`Gemini Error in [${context}]:`, error);
-    }
+    console.warn(`Gemini Error in [${context}]:`, error);
 };
 
 // ... existing blobToBase64 ...
@@ -73,7 +54,6 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
 };
 
 // --- Audio Helpers for TTS ---
-// ... existing Audio Helpers ...
 let audioContext: AudioContext | null = null;
 
 function getAudioContext() {
@@ -92,7 +72,7 @@ export const resumeAudioContext = async () => {
     try {
       await ctx.resume();
     } catch (e) {
-      // ignore resume errors
+      // ignore
     }
   }
 };
@@ -127,7 +107,6 @@ async function decodeAudioData(
 }
 
 // --- TTS Caching & Prefetching ---
-// ... existing TTS logic ...
 const ttsCache = new Map<string, AudioBuffer>();
 const pendingTTS = new Map<string, Promise<AudioBuffer | null>>();
 
@@ -141,37 +120,27 @@ const getTTSAudioBuffer = async (text: string): Promise<AudioBuffer | null> => {
 
   const fetchPromise = (async () => {
     try {
-      // Increased timeout to 5000ms (5s) to allow high-quality AI voice to load
-      // instead of falling back to robotic browser voice too quickly.
-      const timeoutPromise = new Promise<null>((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 5000) 
-      );
-
-      const response = await Promise.race([
-        ai.models.generateContent({
-          model: "gemini-2.5-flash-preview-tts",
-          contents: [{ parts: [{ text: text }] }],
-          config: {
-            responseModalities: ["AUDIO"], 
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: 'Aoede' },
-              },
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: text }] }],
+        config: {
+          responseModalities: ["AUDIO"], 
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Aoede' },
             },
           },
-        }),
-        timeoutPromise
-      ]) as any;
+        },
+      });
 
+      // @ts-ignore
       const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      
       if (!base64Audio) return null;
 
       const ctx = getAudioContext();
       if (!ctx) return null;
 
       const audioBuffer = await decodeAudioData(decode(base64Audio), ctx, 24000, 1);
-      
       ttsCache.set(text, audioBuffer);
       return audioBuffer;
     } catch (error) {
@@ -203,7 +172,6 @@ const speakBrowser = (text: string) => {
         u.lang = 'en-US';
     }
     
-    // Adjusted to be more natural/humanoid (Standard Pitch/Rate)
     u.rate = 1.0; 
     u.pitch = 1.0; 
     
@@ -214,7 +182,7 @@ export const playTextToSpeech = async (text: string) => {
   if (!text) return;
   const ctx = getAudioContext();
   
-  // 1. Check Cache
+  // 1. Check Cache - If we have High Quality Audio, use it immediately
   if (ctx && ttsCache.has(text)) {
       if (ctx.state === 'suspended') try { await ctx.resume(); } catch(e){}
       const buffer = ttsCache.get(text)!;
@@ -225,39 +193,14 @@ export const playTextToSpeech = async (text: string) => {
       return;
   }
 
-  // 2. Check Pending - Wait for prefetch to finish
-  if (ctx && pendingTTS.has(text)) {
-      try {
-          const buffer = await pendingTTS.get(text);
-          if (buffer) {
-            if (ctx.state === 'suspended') try { await ctx.resume(); } catch(e){}
-            const source = ctx.createBufferSource();
-            source.buffer = buffer;
-            source.connect(ctx.destination);
-            source.start();
-            return;
-          }
-      } catch (e) { /* ignore */ }
-  }
+  // 2. Instant Fallback to Browser TTS
+  // If the audio isn't cached, we do NOT wait for the API call. 
+  // We play the robot voice immediately to prevent lag.
+  speakBrowser(text);
 
-  // 3. Try to fetch fresh (GenAI) - Prioritize quality/consistency over browser TTS unless failed
-  if (ctx) {
-      if (ctx.state === 'suspended') try { await ctx.resume(); } catch(e){}
-      const buffer = await getTTSAudioBuffer(text);
-      if (buffer) {
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        source.start();
-        return;
-      }
-  }
-
-  // 4. Fallback to Browser
-  if ('speechSynthesis' in window) {
-      speakBrowser(text);
-      return;
-  }
+  // 3. Prefetch for next time (Background)
+  // We start the fetch in the background so next time it might be ready.
+  prefetchTTS(text);
 };
 
 // ... existing Image Helpers ...
@@ -271,13 +214,18 @@ export const getHangmanImageUrl = (hint: string): string => {
     return `https://image.pollinations.ai/prompt/cartoon%20${encodeURIComponent(term)}?width=250&height=250&model=flux&nologo=true&seed=${encodeURIComponent(term)}`;
 };
 
-// --- Content Generators ---
-// ... existing Content Generators ...
+// ... Content Generators ...
+
+// 1. Level Content Generator (Recycles if exhausted)
 export const generateLevelContent = async (vowel: VowelType, excludeWords: string[] = []): Promise<GameQuestion[]> => {
   const specificQuestions = VOWEL_SPECIFIC_FALLBACKS[vowel] || VOWEL_SPECIFIC_FALLBACKS[VowelType.KAMATZ];
-  const available = specificQuestions.filter(q => !excludeWords.includes(q.word));
-  const sourceList = available.length >= 5 ? available : specificQuestions;
-  const shuffled = [...sourceList].sort(() => 0.5 - Math.random());
+  let available = specificQuestions.filter(q => !excludeWords.includes(q.word));
+  
+  if (available.length < 5) {
+      available = specificQuestions; 
+  }
+  
+  const shuffled = [...available].sort(() => 0.5 - Math.random());
   const selected = shuffled.slice(0, 5);
   return Promise.resolve(selected.map(q => ({ ...q, id: q.id + '-' + Date.now() })));
 };
@@ -286,28 +234,40 @@ export const evaluatePronunciation = async (audioBlob: Blob, targetWord: string,
   return "מְצוּיָן!";
 };
 
+// 2. Sentence Generator (Recycles if exhausted, 100+ pool)
 export const generateSentenceQuestions = async (language: 'hebrew' | 'english' = 'hebrew', excludeList: string[] = []): Promise<SentenceQuestion[]> => {
   const getFallback = () => {
       const sourceList = language === 'english' ? FALLBACK_SENTENCES_ENGLISH : FALLBACK_SENTENCES;
-      const available = sourceList.filter(s => !excludeList.includes(s.fullSentence));
-      const pool = available.length >= 5 ? available : sourceList;
-      const shuffled = [...pool].sort(() => 0.5 - Math.random());
+      let available = sourceList.filter(s => !excludeList.includes(s.fullSentence));
+      
+      if (available.length < 5) {
+          available = sourceList;
+      }
+      
+      const shuffled = [...available].sort(() => 0.5 - Math.random());
+      
       return shuffled.slice(0, 5).map((s, i) => ({ id: `fallback-${Date.now()}-${i}`, ...s }));
   };
   return getFallback();
 };
 
+// 3. Hangman Words Generator (Recycles)
 export const generateHangmanWords = async (language: 'hebrew' | 'english' = 'hebrew', excludeList: string[] = []): Promise<{word: string, hint: string, hebrewHint: string, imagePrompt: string}[]> => {
   const getFallback = () => {
       const fallbackSource = language === 'english' ? FALLBACK_HANGMAN_WORDS_ENGLISH : FALLBACK_HANGMAN_WORDS;
-      const available = fallbackSource.filter(w => !excludeList.includes(w.word));
-      const source = available.length >= 5 ? available : fallbackSource;
-      const shuffled = [...source].sort(() => 0.5 - Math.random());
+      let available = fallbackSource.filter(w => !excludeList.includes(w.word));
+      
+      if (available.length < 5) {
+          available = fallbackSource;
+      }
+      
+      const shuffled = [...available].sort(() => 0.5 - Math.random());
       return shuffled.slice(0, 5);
   };
   return getFallback();
 };
 
+// 4. Rhymes Generator (Recycles)
 export const generateRhymeQuestions = async (excludeWords: string[] = []): Promise<RhymeQuestion[]> => {
     const getFallback = () => {
         let available = FALLBACK_RHYMES.filter(q => !excludeWords.includes(q.targetWord));
@@ -320,22 +280,26 @@ export const generateRhymeQuestions = async (excludeWords: string[] = []): Promi
     return getFallback();
 };
 
-// UPDATED: Now supports fetching multiple random questions without repetition
+// 5. Reading Generator (Recycles, Shuffles, 100+ Questions)
 export const generateReadingQuestions = async (excludeIds: string[] = [], language: 'hebrew' | 'english' = 'hebrew'): Promise<ReadingQuestion[]> => {
     // 1. Select source based on language
     const sourceList = language === 'english' ? FALLBACK_READING_QUESTIONS_ENGLISH : FALLBACK_READING_QUESTIONS;
 
-    // 2. Filter out questions that have already been played in this session (excludeIds)
-    const available = sourceList.filter(q => !excludeIds.includes(q.id));
+    // 2. Filter out questions that have already been played (excludeIds)
+    // IMPORTANT: Compare pure IDs if the IDs in history were modified with timestamps previously, though here we use stable IDs from constants
+    let available = sourceList.filter(q => !excludeIds.includes(q.id));
     
-    // 3. If we've run out of unique questions, reset and use the full list
-    const pool = available.length > 0 ? available : sourceList;
+    // 3. If exhausted (or too few for a batch), recycle the full list
+    if (available.length < 5) {
+        available = sourceList;
+        // NOTE: In a real recycle scenario, we might want to clear the excludeIds in the parent component 
+        // to restart the cycle cleanly, but strictly here we just serve from full list randomized.
+    }
     
     // 4. Shuffle the pool completely
-    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    const shuffled = [...available].sort(() => 0.5 - Math.random());
     
-    // 5. Return a batch (e.g., 5 at a time) to allow the game to flow
-    // The Game Component will append these to its state.
+    // 5. Return a batch (e.g., 5 at a time)
     return shuffled.slice(0, 5);
 };
 
