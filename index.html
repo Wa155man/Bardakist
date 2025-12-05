@@ -43,6 +43,7 @@
         width: 100%;
         margin: 0;
         overflow: hidden; /* Prevent body scroll, handle in container */
+        overscroll-behavior: none; /* Prevent Pull-to-Refresh / Rubber-banding on mobile */
         -webkit-tap-highlight-color: transparent; /* Remove blue tap highlight */
         -webkit-touch-callout: none; /* Disable long-press callouts */
         user-select: none; /* Disable text selection */
@@ -52,7 +53,7 @@
       body {
         font-family: 'Rubik', sans-serif;
         background-color: #1e293b; /* Slate-800 for outer frame background */
-        touch-action: none; /* Prevent bounce scroll on mobile */
+        touch-action: none; /* Prevent bounce scroll on mobile globally (override in scrollable areas) */
       }
       
       #root {

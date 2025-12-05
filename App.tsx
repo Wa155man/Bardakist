@@ -58,6 +58,19 @@ export const App: React.FC = () => {
   const [snowmanLanguage, setSnowmanLanguage] = useState<'hebrew' | 'english'>('hebrew');
   const [hangmanLanguage, setHangmanLanguage] = useState<'hebrew' | 'english'>('hebrew');
   const [currentReward, setCurrentReward] = useState<GuriReward | null>(null);
+  
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  // Capture Install Prompt
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault(); // Prevent default mini-infobar
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
 
   // UNLOCK AUDIO CONTEXT ON FIRST INTERACTION
   useEffect(() => {
@@ -471,7 +484,8 @@ export const App: React.FC = () => {
       
       {tutorialActive && <TutorialOverlay steps={tutorialSteps} currentStepIndex={tutorialStepIndex} onNext={handleTutorialNext} onComplete={() => setTutorialActive(false)} pet={getSelectedPet()} />}
       {currentReward && <RewardOverlay reward={currentReward} onClose={() => setCurrentReward(null)} pet={getSelectedPet()} />}
-      {isSettingsOpen && <SettingsModal settings={settings} userProgress={userProgress} onSave={handleSaveSettings} onClose={() => setIsSettingsOpen(false)} onResetProgress={handleResetProgress} onLoadProgress={handleLoadProgress} onResetScore={handleResetScore} pets={PETS} />}
+      
+      {isSettingsOpen && <SettingsModal settings={settings} userProgress={userProgress} onSave={handleSaveSettings} onClose={() => setIsSettingsOpen(false)} onResetProgress={handleResetProgress} onLoadProgress={handleLoadProgress} onResetScore={handleResetScore} pets={PETS} deferredPrompt={deferredPrompt} />}
       
       <FontControl currentFont={settings.fontStyle} onChange={(f) => handleSaveSettings({...settings, fontStyle: f})} />
       <button onClick={() => setIsSettingsOpen(true)} className={`absolute z-[200] bg-white/90 p-3 rounded-full shadow-md border-2 border-gray-200 hover:rotate-90 transition-transform duration-300 ${screen === ScreenState.HANGMAN_GAME ? 'top-4 right-4 md:top-8 md:right-8' : 'bottom-4 right-4 md:bottom-8 md:right-8'}`} title="הגדרות">

@@ -12,6 +12,7 @@ interface SettingsModalProps {
   onLoadProgress: (progress: UserProgress) => void;
   onResetScore: () => void;
   pets?: PetProfile[];
+  deferredPrompt?: any;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
@@ -22,7 +23,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onResetProgress,
   onLoadProgress,
   onResetScore,
-  pets = []
+  pets = [],
+  deferredPrompt
 }) => {
   const [name, setName] = useState(settings.childName);
   const [sfx, setSfx] = useState(settings.soundEffects);
@@ -63,6 +65,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       onClose();
     }
   };
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to the install prompt: ${outcome}`);
+  };
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
 
   const handleExportProgress = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(userProgress));
@@ -117,8 +128,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <h2 className="text-3xl font-black text-slate-700 font-dynamic">הגדרות (Settings)</h2>
         </div>
 
-        <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar">
+        {/* Scrollable Content - Added touch-action: pan-y to enable scrolling on mobile despite global lock */}
+        <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar" style={{ touchAction: 'pan-y' }}>
           
+          {/* Install App Section (PWA) */}
+          {(deferredPrompt || isIOS) && (
+             <div className="bg-blue-50 border-2 border-blue-100 rounded-xl p-4">
+                 <h3 className="font-bold text-blue-700 mb-2 font-dynamic">התקנת האפליקציה (Install)</h3>
+                 {deferredPrompt && (
+                     <button 
+                        onClick={handleInstallClick}
+                        className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-md active:scale-95"
+                     >
+                        📲 התקן עכשיו / Install App
+                     </button>
+                 )}
+                 {isIOS && (
+                     <div className="text-sm text-blue-800 text-center">
+                        To install: Tap <span className="font-bold text-lg">Share</span> then <span className="font-bold">"Add to Home Screen"</span>
+                     </div>
+                 )}
+             </div>
+          )}
+
           {/* Name Input */}
           <div className="space-y-2">
             <label className="block text-slate-600 font-bold text-lg font-dynamic">שם הילד/ה (Name)</label>
