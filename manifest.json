@@ -1,21 +1,27 @@
-
 {
-  "name": "Bardakist - Hebrew Learning",
+  "name": "BARDAK - Reading Adventures",
   "short_name": "Bardakist",
+  "description": "A playful, gamified Hebrew learning application for children featuring a world-map progression, interactive mini-games, and vocal reinforcement using Gemini AI for content generation.",
   "start_url": ".",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#1e293b",
   "theme_color": "#fcd34d",
   "icons": [
     {
       "src": "https://image.pollinations.ai/prompt/cute%20white%20maltipoo%20puppy%20face%20icon%20cartoon%20vector?width=192&height=192&nologo=true",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://image.pollinations.ai/prompt/cute%20white%20maltipoo%20puppy%20face%20icon%20cartoon%20vector?width=512&height=512&nologo=true",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
+  ],
+  "requestFramePermissions": [
+    "microphone"
   ]
 }

@@ -2,9 +2,18 @@
 <html lang="he" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Bardakist - Hebrew Learning</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- iOS / Mobile App Capability -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bardakist">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- App Icons -->
+    <link rel="apple-touch-icon" href="https://image.pollinations.ai/prompt/cute%20white%20maltipoo%20puppy%20face%20icon%20cartoon%20vector?width=192&height=192&nologo=true">
     <link rel="manifest" href="./manifest.json">
+    
     <meta name="theme-color" content="#fcd34d">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,6 +31,10 @@
     <style>
       :root {
         --dynamic-font: 'Varela Round', sans-serif; /* Default Print */
+        --sat: env(safe-area-inset-top);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+        --sar: env(safe-area-inset-right);
       }
 
       html, body {
@@ -30,6 +43,10 @@
         width: 100%;
         margin: 0;
         overflow: hidden; /* Prevent body scroll, handle in container */
+        -webkit-tap-highlight-color: transparent; /* Remove blue tap highlight */
+        -webkit-touch-callout: none; /* Disable long-press callouts */
+        user-select: none; /* Disable text selection */
+        -webkit-user-select: none;
       }
 
       body {
@@ -120,6 +137,14 @@
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
+      }
+
+      /* Mobile Safe Area Utilities */
+      .safe-pt {
+        padding-top: env(safe-area-inset-top);
+      }
+      .safe-pb {
+        padding-bottom: env(safe-area-inset-bottom);
       }
     </style>
   

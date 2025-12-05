@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { LEVEL_NODES } from '../constants';
 import { LevelNode } from '../types';
@@ -27,8 +26,9 @@ export const LevelMap: React.FC<LevelMapProps> = ({ onSelectLevel, onQuickPlay, 
         }}
       />
 
-      {/* Title */}
-      <div className="absolute top-16 md:top-12 left-1/2 transform -translate-x-1/2 z-10 text-center w-full pointer-events-none">
+      {/* Title - Respect Top Safe Area */}
+      <div className="absolute left-1/2 transform -translate-x-1/2 z-10 text-center w-full pointer-events-none"
+           style={{ top: 'max(4rem, calc(3rem + env(safe-area-inset-top)))' }}>
         <h1 
           className="text-4xl md:text-5xl font-black text-yellow-400 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] font-dynamic tracking-wide"
           style={{ WebkitTextStroke: '2px #166534' }}
@@ -120,10 +120,11 @@ export const LevelMap: React.FC<LevelMapProps> = ({ onSelectLevel, onQuickPlay, 
         </div>
       ))}
       
-      {/* Controls - Split Layout to clear center */}
+      {/* Controls - Split Layout to clear center - Respect Safe Area Bottom */}
       
       {/* Quick Play (Left) */}
-      <div className="absolute bottom-6 left-4 md:bottom-8 md:left-8 pointer-events-auto z-[100]">
+      <div className="absolute left-4 z-[100]"
+           style={{ bottom: 'max(1.5rem, calc(1rem + env(safe-area-inset-bottom)))' }}>
           <button 
             type="button"
             onClick={(e) => {
@@ -149,7 +150,8 @@ export const LevelMap: React.FC<LevelMapProps> = ({ onSelectLevel, onQuickPlay, 
       </div>
 
       {/* Mini Games & Fun Zone (Right) */}
-      <div className="absolute bottom-28 right-4 md:bottom-40 md:right-8 flex gap-3 md:gap-4 pointer-events-auto z-[100]">
+      <div className="absolute right-4 md:right-8 flex gap-3 md:gap-4 pointer-events-auto z-[100]"
+           style={{ bottom: 'max(7rem, calc(6rem + env(safe-area-inset-bottom)))' }}>
         <div className="flex flex-col md:flex-row items-end gap-3 md:gap-4">
            {/* Mini Games */}
            <button 

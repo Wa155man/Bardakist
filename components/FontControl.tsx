@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AppSettings } from '../types';
 
@@ -20,7 +19,10 @@ export const FontControl: React.FC<FontControlProps> = ({ currentFont, onChange 
   ];
 
   return (
-    <div className="fixed bottom-4 left-4 z-[200] flex flex-col-reverse gap-2 items-start">
+    <div 
+      className="fixed left-4 z-[200] flex flex-col-reverse gap-2 items-start"
+      style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+    >
       {/* Main Button */}
       <button
         onClick={toggleOpen}
