@@ -197,132 +197,270 @@ export const FALLBACK_SENTENCES_ENGLISH: SentenceQuestion[] = [
   // ... (Abbreviated for brevity)
 ];
 
-// --- 100 HEBREW READING QUESTIONS (GRAMMATICALLY CORRECT) ---
-export const FALLBACK_READING_QUESTIONS: ReadingQuestion[] = Array.from({ length: 100 }, (_, i) => {
-    // 1. Define Subjects with Gender
+// --- 100 HEBREW READING QUESTIONS (GRAMMATICALLY CORRECT & SEMANTICALLY LOGICAL) ---
+// Includes two types: Stories (3 sentences) and Riddles (Who am I?)
+export const FALLBACK_READING_QUESTIONS: ReadingQuestion[] = (() => {
+    const questions: ReadingQuestion[] = [];
+    
+    // 1. Data Definitions for Stories
     const subjects = [
-        { name: 'דָּנִי', gender: 'M' },
-        { name: 'דָּנָה', gender: 'F' },
-        { name: 'רוֹנִי', gender: 'M' },
-        { name: 'מָאיָה', gender: 'F' },
-        { name: 'יוֹסִי', gender: 'M' },
-        { name: 'נוֹעָה', gender: 'F' },
-        { name: 'עוֹמֶר', gender: 'M' },
-        { name: 'תָּמָר', gender: 'F' },
-        { name: 'גַּל', gender: 'M' },
-        { name: 'רִינָה', gender: 'F' }
+        { name: 'דָּנִי', gender: 'M' }, { name: 'יוֹסִי', gender: 'M' }, { name: 'עוֹמֶר', gender: 'M' }, { name: 'גַּל', gender: 'M' }, { name: 'אִיתַי', gender: 'M' },
+        { name: 'דָּנָה', gender: 'F' }, { name: 'נוֹעָה', gender: 'F' }, { name: 'תָּמָר', gender: 'F' }, { name: 'מָאיָה', gender: 'F' }, { name: 'רְוִיטַל', gender: 'F' }
     ];
 
-    // 2. Define Verbs with Gender Conjugations (Past Tense)
-    const verbs = [
-        { m: 'אָכַל', f: 'אָכְלָה' },
-        { m: 'רָאָה', f: 'רָאֲתָה' },
-        { m: 'קָנָה', f: 'קָנְתָה' },
-        { m: 'צִיֵּר', f: 'צִיְּרָה' },
-        { m: 'מָצָא', f: 'מָצְאָה' },
-        { m: 'בָּנָה', f: 'בָּנְתָה' },
-        { m: 'לָקַח', f: 'לָקְחָה' },
-        { m: 'תָּפַס', f: 'תָּפְסָה' },
-        { m: 'זָרַק', f: 'זָרְקָה' },
-        { m: 'הֶחֱזִיק', f: 'הֶחֱזִיקָה' }
+    const actions = [
+        { 
+            verbM: 'אָכַל', verbF: 'אָכְלָה', 
+            category: 'food',
+            getQuestion: (s:string, gender: string) => `מָה ${gender === 'M' ? 'אָכַל' : 'אָכְלָה'} ${s}?`
+        },
+        { 
+            verbM: 'לָבַשׁ', verbF: 'לָבְשָׁה', 
+            category: 'clothes',
+            getQuestion: (s:string, gender: string) => `מָה ${gender === 'M' ? 'לָבַשׁ' : 'לָבְשָׁה'} ${s}?`
+        },
+        { 
+            verbM: 'קָנָה', verbF: 'קָנְתָה', 
+            category: 'general',
+            getQuestion: (s:string, gender: string) => `מָה ${gender === 'M' ? 'קָנָה' : 'קָנְתָה'} ${s}?`
+        },
+        { 
+            verbM: 'רָאָה', verbF: 'רָאֲתָה', 
+            category: 'animal',
+            getQuestion: (s:string, gender: string) => `אֶת מִי ${gender === 'M' ? 'רָאָה' : 'רָאֲתָה'} ${s}?`
+        },
+        { 
+            verbM: 'שִׂחֵק בְּ', verbF: 'שִׂחֲקָה בְּ', // Played with (using Be-)
+            category: 'toy',
+            getQuestion: (s:string, gender: string) => `בְּמָה ${gender === 'M' ? 'שִׂחֵק' : 'שִׂחֲקָה'} ${s}?`
+        }
     ];
 
-    // 3. Define Objects with Gender (for adjective agreement)
     const objects = [
-        { name: 'תַּפּוּחַ', gender: 'M' },
-        { name: 'כַּדּוּר', gender: 'M' },
-        { name: 'סֵפֶר', gender: 'M' },
-        { name: 'בֻּבָּה', gender: 'F' },
-        { name: 'חֻלְצָה', gender: 'F' },
-        { name: 'כֶּלֶב', gender: 'M' },
-        { name: 'חָתוּל', gender: 'M' },
-        { name: 'עוּגָה', gender: 'F' },
-        { name: 'גְּלִידָה', gender: 'F' },
-        { name: 'כּוֹבַע', gender: 'M' }
+        { name: 'תַּפּוּחַ', gender: 'M', category: 'food' },
+        { name: 'בָּנָנָה', gender: 'F', category: 'food' },
+        { name: 'פִּיצָה', gender: 'F', category: 'food' },
+        { name: 'גְּלִידָה', gender: 'F', category: 'food' },
+        { name: 'חֻלְצָה', gender: 'F', category: 'clothes' },
+        { name: 'כּוֹבַע', gender: 'M', category: 'clothes' },
+        { name: 'מְעִיל', gender: 'M', category: 'clothes' },
+        { name: 'שִׁמְלָה', gender: 'F', category: 'clothes' },
+        { name: 'כַּדּוּר', gender: 'M', category: 'toy' },
+        { name: 'בֻּבָּה', gender: 'F', category: 'toy' },
+        { name: 'מְכוֹנִית', gender: 'F', category: 'toy' },
+        { name: 'כֶּלֶב', gender: 'M', category: 'animal' },
+        { name: 'חָתוּל', gender: 'M', category: 'animal' },
+        { name: 'אַרְנָב', gender: 'M', category: 'animal' },
+        { name: 'צִפּוֹר', gender: 'F', category: 'animal' } 
     ];
 
-    // 4. Define Adjectives with Gender
     const adjectives = [
-        { m: 'אָדֹם', f: 'אֲדֻמָּה' },
         { m: 'גָּדוֹל', f: 'גְּדוֹלָה' },
-        { m: 'יָפֶה', f: 'יָפָה' },
         { m: 'קָטָן', f: 'קְטַנָּה' },
-        { m: 'כָּחֹל', f: 'כְּחֻלָּה' },
-        { m: 'טָעִים', f: 'טְעִימָה' },
+        { m: 'יָפֶה', f: 'יָפָה' },
         { m: 'חָדָשׁ', f: 'חֲדָשָׁה' },
-        { m: 'שָׂמֵחַ', f: 'שְׂמֵחָה' },
-        { m: 'צָהֹב', f: 'צְהֻבָּה' },
-        { m: 'מַצְחִיק', f: 'מַצְחִיקָה' }
+        { m: 'טָעִים', f: 'טְעִימָה' } // Special check needed for non-food
+    ];
+
+    const getObjectsByCategory = (cat: string) => objects.filter(o => cat === 'general' || o.category === cat);
+
+    // --- TYPE 1: SHORT STORIES (Action Based) ---
+    // Generate 60 Stories
+    for (let i = 0; i < 60; i++) {
+        const subj = subjects[i % subjects.length];
+        const action = actions[i % actions.length];
+        
+        const validObjects = getObjectsByCategory(action.category);
+        const obj = validObjects[i % validObjects.length];
+        
+        // Filter adjectives: Don't use "Tasty" for non-food
+        let validAdjectives = adjectives;
+        if (action.category !== 'food') {
+            validAdjectives = adjectives.filter(a => a.m !== 'טָעִים');
+        }
+        const adj = validAdjectives[i % validAdjectives.length];
+        
+        // Construct Sentence parts
+        const verb = subj.gender === 'M' ? action.verbM : action.verbF;
+        
+        // Object formatting: if verb ends in 'בְּ', join it. Else usually direct object 'אֶת הַ'.
+        // "Played with the ball" -> "Shichek Ba-Kadur" (Be + Ha)
+        let objectPhrase = `אֶת הַ${obj.name}`;
+        if (verb.endsWith('בְּ')) {
+             objectPhrase = `בַּ${obj.name}`; // Ba = Be + Ha
+        } else if (verb.endsWith('עִם')) {
+             objectPhrase = `עִם הַ${obj.name}`;
+        }
+
+        // Clean verb for sentence (remove preposition if needed for split, but here we kept them attached in definition except when combining)
+        // Actually, if verb is "שִׂחֵק בְּ", and we add "בַּכַּדּוּר", we just remove the standalone 'בְּ' from verb string if we merge, 
+        // OR we define verb as "שִׂחֵק" and handle preposition.
+        // Simplified approach: The verb definitions above include the preposition.
+        // So: "שִׂחֵק בְּ" + "בַּכַּדּוּר" is wrong. It should be "שִׂחֵק" + "בַּכַּדּוּר".
+        // Let's strip the preposition from the verb for the sentence if we are using the 'Ba' form.
+        
+        let sentenceVerb = verb;
+        let sentenceObj = `אֶת הַ${obj.name}`;
+        
+        if (action.category === 'toy') {
+            // "Shichek ba-kadur"
+            sentenceVerb = subj.gender === 'M' ? 'שִׂחֵק' : 'שִׂחֲקָה';
+            sentenceObj = `בַּ${obj.name}`;
+        }
+
+        const was = obj.gender === 'M' ? 'הָיָה' : 'הָיְתָה';
+        const adjForm = obj.gender === 'M' ? adj.m : adj.f;
+        
+        const subjHappy = subj.gender === 'M' ? 'שָׂמֵחַ' : 'שְׂמֵחָה';
+        const wasSubj = subj.gender === 'M' ? 'הָיָה' : 'הָיְתָה';
+
+        const passage = `${subj.name} ${sentenceVerb} ${sentenceObj}. הַ${obj.name} ${was} ${adjForm}. ${subj.name} ${wasSubj} ${subjHappy}.`;
+        
+        const question = action.getQuestion(subj.name, subj.gender);
+
+        const correctAnswer = sentenceObj;
+
+        // Distractors
+        const otherObjs = objects.filter(o => o.name !== obj.name).sort(() => Math.random() - 0.5).slice(0, 3);
+        const options = [correctAnswer, ...otherObjs.map(o => {
+             if (action.category === 'toy') return `בַּ${o.name}`;
+             return `אֶת הַ${o.name}`;
+        })].sort(() => Math.random() - 0.5);
+
+        questions.push({
+            id: `story-${i}`,
+            passage,
+            question,
+            options,
+            correctAnswer
+        });
+    }
+
+    // --- TYPE 2: RIDDLES (Logic Based) ---
+    // Generate 40 Riddles
+    const riddles = [
+        { 
+            clues: ['אֲנִי צָהֹב', 'אֲנִי זוֹרַחַת בַּשָּׁמַיִם', 'אֲנִי חַמָּה מְאוֹד'], 
+            answer: 'שֶׁמֶשׁ', dist: ['יָרֵחַ', 'כּוֹכָב', 'עָנָן'] 
+        },
+        { 
+            clues: ['אֲנִי גָּדוֹל', 'יֵשׁ לִי חֵדֶק אָרֹךְ', 'יֵשׁ לִי אָזְנַיִם גְּדוֹלוֹת'], 
+            answer: 'פִּיל', dist: ['אַרְיֵה', 'נָמֵר', 'חָתוּל'] 
+        },
+        { 
+            clues: ['יֵשׁ לִי 4 רַגְלַיִם', 'אֲנִי נוֹבֵחַ', 'אֲנִי הֶחָבֵר שֶׁל הָאָדָם'], 
+            answer: 'כֶּלֶב', dist: ['חָתוּל', 'סוּס', 'פָּרָה'] 
+        },
+        { 
+            clues: ['אֲנִי מְיַלֵּל', 'אֲנִי אוֹהֵב חָלָב', 'יֵשׁ לִי שָׂפָם'], 
+            answer: 'חָתוּל', dist: ['כֶּלֶב', 'עַכְבָּר', 'צִפּוֹר'] 
+        },
+        { 
+            clues: ['אֲנִי אָדֹם וְעָגֹל', 'יֵשׁ לִי מִיץ', 'אוֹכְלִים אוֹתִי בַּסָּלָט'], 
+            answer: 'עַגְבָנִיָּה', dist: ['מְלָפְפוֹן', 'בָּנָנָה', 'לֶחֶם'] 
+        },
+        { 
+            clues: ['אֲנִי יוֹרֵד מֵהַשָּׁמַיִם בַּחֹרֶף', 'אֲנִי רָטֹב', 'אֲנִי מַשְׁקֶה אֶת הַצְּמָחִים'], 
+            answer: 'גֶּשֶׁם', dist: ['שֶׁמֶשׁ', 'רוּחַ', 'חוֹל'] 
+        },
+        { 
+            clues: ['נוֹסְעִים בִּי', 'יֵשׁ לִי 4 גַּלְגַּלִּים', 'אֲנִי נוֹסַעַת עַל הַכְּבִישׁ'], 
+            answer: 'מְכוֹנִית', dist: ['מָטוֹס', 'אֳנִיָּה', 'אוֹפַנַּיִם'] 
+        },
+        { 
+            clues: ['קוֹרְאִים בִּי', 'יֵשׁ לִי דַּפִּים', 'יֵשׁ בִּי סִפּוּרִים'], 
+            answer: 'סֵפֶר', dist: ['מַחְשֵׁב', 'טֵלֶוִיזְיָה', 'טֵלֵפוֹן'] 
+        },
+        { 
+            clues: ['אֲנִי לָבָן וְקַר', 'בּוֹנִים מִמֶּנִּי אִישׁ שֶׁלֶג', 'אֲנִי יוֹרֵד בַּחֶרְמוֹן'], 
+            answer: 'שֶׁלֶג', dist: ['גֶּשֶׁם', 'שֶׁמֶשׁ', 'חוֹל'] 
+        },
+        { 
+            clues: ['אֲנִי גָּר בַּיָּם', 'אֲנִי שׂוֹחֶה', 'יֵשׁ לִי סְנַפִּירִים'], 
+            answer: 'דָּג', dist: ['צִפּוֹר', 'כֶּלֶב', 'אַרְיֵה'] 
+        }
+    ];
+
+    for (let i = 0; i < 40; i++) {
+        const r = riddles[i % riddles.length];
+        const passage = `${r.clues[0]}. ${r.clues[1]}. ${r.clues[2]}.`;
+        const question = "מִי אֲנִי?"; // Who am I?
+        const options = [r.answer, ...r.dist].sort(() => Math.random() - 0.5);
+        
+        questions.push({
+            id: `riddle-${i}`,
+            passage,
+            question,
+            options,
+            correctAnswer: r.answer
+        });
+    }
+
+    return questions.sort(() => Math.random() - 0.5);
+})();
+
+// --- 100 ENGLISH READING QUESTIONS (Mixed Stories and Logic) ---
+export const FALLBACK_READING_QUESTIONS_ENGLISH: ReadingQuestion[] = (() => {
+    const questions: ReadingQuestion[] = [];
+    
+    // --- STORIES ---
+    const subjects = ['Tom', 'Lisa', 'Ben', 'Anna', 'Sam', 'Kate', 'Max', 'Emma', 'Dan', 'Mia'];
+    const actions = [
+        { verb: 'ate', cat: 'food' },
+        { verb: 'bought', cat: 'item' },
+        { verb: 'saw', cat: 'animal' },
+        { verb: 'wore', cat: 'clothes' },
+        { verb: 'found', cat: 'item' }
     ];
     
-    // Select components based on index to ensure 100 unique combinations
-    const s = subjects[i % subjects.length];
-    const v = verbs[Math.floor(i / 10) % 10]; // Change verb every 10
-    const o = objects[i % objects.length];
-    const a = adjectives[i % adjectives.length];
-    
-    // Grammatical Construction
-    const subjectName = s.name;
-    const verbForm = s.gender === 'M' ? v.m : v.f;
-    const objectName = o.name;
-    
-    // "The [Object] was [Adjective]" -> Agreement with Object
-    const wasVerb = o.gender === 'M' ? 'הָיָה' : 'הָיְתָה';
-    const adjForm = o.gender === 'M' ? a.m : a.f;
-    
-    // "The [Subject] was happy" -> Agreement with Subject
-    const wasSubject = s.gender === 'M' ? 'הָיָה' : 'הָיְתָה';
-    const happyAdj = s.gender === 'M' ? 'שָׂמֵחַ' : 'שְׂמֵחָה';
-    
-    // Full Passage: "Dana ate a cake. The cake was tasty. Dana was happy."
-    const passage = `${subjectName} ${verbForm} ${objectName}. הַ${objectName} ${wasVerb} ${adjForm}. ${subjectName} ${wasSubject} ${happyAdj}.`;
-    
-    // Question: "What did Dana eat?"
-    const question = `מָה ${verbForm} ${subjectName}?`;
-    
-    // Answer: "The cake" (using 'Et Ha-' for direct object)
-    const correctAnswer = `אֶת הַ${objectName}`; 
-    
-    // Distractors
-    const otherObjs = objects.filter(obj => obj.name !== objectName).sort(() => Math.random() - 0.5).slice(0, 3);
-    const options = [`אֶת הַ${objectName}`, ...otherObjs.map(obj => `אֶת הַ${obj.name}`)].sort(() => Math.random() - 0.5);
+    const items = [
+        { name: 'apple', cat: 'food' }, { name: 'cake', cat: 'food' }, { name: 'pizza', cat: 'food' },
+        { name: 'shirt', cat: 'clothes' }, { name: 'hat', cat: 'clothes' }, { name: 'coat', cat: 'clothes' },
+        { name: 'dog', cat: 'animal' }, { name: 'cat', cat: 'animal' }, { name: 'bird', cat: 'animal' },
+        { name: 'ball', cat: 'item' }, { name: 'book', cat: 'item' }, { name: 'pen', cat: 'item' }
+    ];
+    const adjectives = ['big', 'small', 'red', 'blue', 'nice', 'new'];
 
-    return {
-        id: `he-read-${i + 1}`,
-        passage: passage,
-        question: question,
-        options: options,
-        correctAnswer: correctAnswer
-    };
-});
+    for(let i=0; i<60; i++) {
+        const s = subjects[i % subjects.length];
+        const act = actions[i % actions.length];
+        const validItems = items.filter(it => act.cat === 'item' || it.cat === act.cat);
+        const obj = validItems[i % validItems.length];
+        const adj = adjectives[i % adjectives.length];
+        
+        const passage = `${s} ${act.verb} a ${obj.name}. The ${obj.name} was ${adj}. ${s} was happy.`;
+        const question = `What did ${s} ${act.verb === 'wore' ? 'wear' : act.verb === 'saw' ? 'see' : act.verb === 'ate' ? 'eat' : act.verb === 'bought' ? 'buy' : 'find'}?`;
+        
+        const answer = `A ${obj.name}`;
+        const dists = items.filter(it => it.name !== obj.name).sort(()=>Math.random()-0.5).slice(0,3).map(it => `A ${it.name}`);
+        
+        questions.push({
+            id: `en-story-${i}`,
+            passage, question,
+            options: [answer, ...dists].sort(()=>Math.random()-0.5),
+            correctAnswer: answer
+        });
+    }
 
-// --- 100 ENGLISH READING QUESTIONS ---
-export const FALLBACK_READING_QUESTIONS_ENGLISH: ReadingQuestion[] = Array.from({ length: 100 }, (_, i) => {
-    const subjects = ['Tom', 'Lisa', 'Ben', 'Anna', 'Sam', 'Kate', 'Max', 'Emma', 'Dan', 'Mia'];
-    const verbs = ['saw', 'ate', 'found', 'bought', 'liked', 'held', 'wanted', 'lost', 'made', 'drew'];
-    const objects = ['a cat', 'a dog', 'a ball', 'a car', 'a book', 'a hat', 'a cake', 'an apple', 'a pen', 'a toy'];
-    const adjectives = ['big', 'small', 'red', 'blue', 'fast', 'funny', 'cute', 'new', 'old', 'happy'];
-    
-    const s = subjects[i % subjects.length];
-    const v = verbs[Math.floor(i / 10) % 10];
-    const o = objects[i % objects.length];
-    const a = adjectives[i % adjectives.length];
-    
-    // Simple story construction
-    const passage = `${s} ${v} ${o}. It was ${a}. ${s} smiled.`;
-    const question = `What did ${s} ${v === 'saw' ? 'see' : v === 'ate' ? 'eat' : v === 'found' ? 'find' : v === 'bought' ? 'buy' : v === 'liked' ? 'like' : v === 'held' ? 'hold' : v === 'wanted' ? 'want' : v === 'lost' ? 'lose' : v === 'made' ? 'make' : 'draw'}?`;
-    
-    const correctAnswer = o.replace('a ', 'The ').replace('an ', 'The '); // Capitalize 'The'
-    
-    // Distractors
-    const otherObjs = objects.filter(obj => obj !== o).sort(() => Math.random() - 0.5).slice(0, 3);
-    const options = [correctAnswer, ...otherObjs.map(obj => obj.replace('a ', 'The ').replace('an ', 'The '))].sort(() => Math.random() - 0.5);
+    // --- RIDDLES ---
+    const enRiddles = [
+        { clues: ["I am hot", "I am in the sky", "I am yellow"], ans: "The Sun", dist: ["The Moon", "A Cloud", "Rain"] },
+        { clues: ["I have 4 legs", "I bark", "I like bones"], ans: "A Dog", dist: ["A Cat", "A Bird", "A Fish"] },
+        { clues: ["I am a fruit", "I am red or green", "I am round"], ans: "An Apple", dist: ["A Banana", "A Carrot", "Bread"] },
+        { clues: ["You wear me", "I go on your head", "I protect from sun"], ans: "A Hat", dist: ["Shoes", "A Shirt", "Pants"] },
+        { clues: ["I have pages", "You read me", "I have stories"], ans: "A Book", dist: ["A Phone", "A TV", "A Ball"] }
+    ];
 
-    return {
-        id: `en-read-${i + 1}`,
-        passage: passage,
-        question: question,
-        options: options,
-        correctAnswer: correctAnswer
-    };
-});
+    for(let i=0; i<40; i++) {
+        const r = enRiddles[i % enRiddles.length];
+        questions.push({
+            id: `en-riddle-${i}`,
+            passage: `${r.clues[0]}. ${r.clues[1]}. ${r.clues[2]}.`,
+            question: "Who am I?",
+            options: [r.ans, ...r.dist].sort(()=>Math.random()-0.5),
+            correctAnswer: r.ans
+        });
+    }
+
+    return questions.sort(()=>Math.random()-0.5);
+})();
