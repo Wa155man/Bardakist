@@ -3,10 +3,6 @@ import { LevelNode, VowelType, HebrewLetter, GameQuestion, RhymeQuestion, GuriRe
 
 // ... (Keep existing LEVEL_NODES, GURI_REWARDS, PETS, HEBREW_ALPHABET, ENGLISH_ALPHABET, VOWEL_SPECIFIC_FALLBACKS, FALLBACK_RHYMES, FALLBACK_TWISTERS, FALLBACK_SENTENCES, FALLBACK_SENTENCES_ENGLISH, FALLBACK_HANGMAN_WORDS, FALLBACK_HANGMAN_WORDS_ENGLISH as they were) ...
 
-// Re-exporting imports to ensure file validity (Abbreviated for the XML block logic, usually not needed if file is patched, but here I replace the file content strategy or specific variable)
-// Ideally I would just replace the variable, but the prompt asks for the file update. 
-// I will include the necessary imports and the PREVIOUS constants, then the NEW massive reading lists.
-
 export const LEVEL_NODES: LevelNode[] = [
   {
     id: '1',
@@ -193,42 +189,110 @@ export const FALLBACK_HANGMAN_WORDS_ENGLISH = [
 
 export const FALLBACK_SENTENCES: SentenceQuestion[] = [
   { id: 's1', fullSentence: 'הַכַּדּוּר הוּא עָגֹל', sentenceWithBlank: 'הַכַּדּוּר הוּא ___', missingWord: 'עָגֹל', distractors: ['מְרֻבָּע', 'יָשָׁר', 'כָּחֹל'], translation: 'The ball is round' },
-  // ... (Abbreviated for brevity, previously updated to 100 items in context)
+  // ... (Abbreviated for brevity)
 ];
 
 export const FALLBACK_SENTENCES_ENGLISH: SentenceQuestion[] = [
   { id: 'es1', fullSentence: 'The sky is blue', sentenceWithBlank: 'The sky is ___', missingWord: 'blue', distractors: ['green', 'yellow', 'red'], translation: 'השמיים כחולים' },
-  // ... (Abbreviated for brevity, previously updated to 100 items in context)
+  // ... (Abbreviated for brevity)
 ];
 
-// --- 100 HEBREW READING QUESTIONS ---
+// --- 100 HEBREW READING QUESTIONS (GRAMMATICALLY CORRECT) ---
 export const FALLBACK_READING_QUESTIONS: ReadingQuestion[] = Array.from({ length: 100 }, (_, i) => {
-    // Generate distinct simple content
-    const subjects = ['דָּנִי', 'דָּנָה', 'רוֹנִי', 'גַּל', 'טַל', 'תָּמָר', 'יוֹסִי', 'נוֹעָה', 'עוֹמֶר', 'מָאיָה'];
-    const verbs = ['אָכַל', 'רָאָה', 'קָנָה', 'צִיֵּר', 'מָצָא', 'אָהַב', 'רָצָה', 'בָּנָה', 'שָׁבַר', 'לָקַח'];
-    const objects = ['תַּפּוּחַ', 'כַּדּוּר', 'סֵפֶר', 'פֶּרַח', 'בָּלוֹן', 'כֶּלֶב', 'חָתוּל', 'עִפָּרוֹן', 'כּוֹבַע', 'בֻּבָּה'];
-    const adjectives = ['אָדֹם', 'גָּדוֹל', 'יָפֶה', 'קָטָן', 'כָּחֹל', 'מָתוֹק', 'חָדָשׁ', 'יָשָׁן', 'שָׂמֵחַ', 'מַהֵר'];
+    // 1. Define Subjects with Gender
+    const subjects = [
+        { name: 'דָּנִי', gender: 'M' },
+        { name: 'דָּנָה', gender: 'F' },
+        { name: 'רוֹנִי', gender: 'M' },
+        { name: 'מָאיָה', gender: 'F' },
+        { name: 'יוֹסִי', gender: 'M' },
+        { name: 'נוֹעָה', gender: 'F' },
+        { name: 'עוֹמֶר', gender: 'M' },
+        { name: 'תָּמָר', gender: 'F' },
+        { name: 'גַּל', gender: 'M' },
+        { name: 'רִינָה', gender: 'F' }
+    ];
+
+    // 2. Define Verbs with Gender Conjugations (Past Tense)
+    const verbs = [
+        { m: 'אָכַל', f: 'אָכְלָה' },
+        { m: 'רָאָה', f: 'רָאֲתָה' },
+        { m: 'קָנָה', f: 'קָנְתָה' },
+        { m: 'צִיֵּר', f: 'צִיְּרָה' },
+        { m: 'מָצָא', f: 'מָצְאָה' },
+        { m: 'בָּנָה', f: 'בָּנְתָה' },
+        { m: 'לָקַח', f: 'לָקְחָה' },
+        { m: 'תָּפַס', f: 'תָּפְסָה' },
+        { m: 'זָרַק', f: 'זָרְקָה' },
+        { m: 'הֶחֱזִיק', f: 'הֶחֱזִיקָה' }
+    ];
+
+    // 3. Define Objects with Gender (for adjective agreement)
+    const objects = [
+        { name: 'תַּפּוּחַ', gender: 'M' },
+        { name: 'כַּדּוּר', gender: 'M' },
+        { name: 'סֵפֶר', gender: 'M' },
+        { name: 'בֻּבָּה', gender: 'F' },
+        { name: 'חֻלְצָה', gender: 'F' },
+        { name: 'כֶּלֶב', gender: 'M' },
+        { name: 'חָתוּל', gender: 'M' },
+        { name: 'עוּגָה', gender: 'F' },
+        { name: 'גְּלִידָה', gender: 'F' },
+        { name: 'כּוֹבַע', gender: 'M' }
+    ];
+
+    // 4. Define Adjectives with Gender
+    const adjectives = [
+        { m: 'אָדֹם', f: 'אֲדֻמָּה' },
+        { m: 'גָּדוֹל', f: 'גְּדוֹלָה' },
+        { m: 'יָפֶה', f: 'יָפָה' },
+        { m: 'קָטָן', f: 'קְטַנָּה' },
+        { m: 'כָּחֹל', f: 'כְּחֻלָּה' },
+        { m: 'טָעִים', f: 'טְעִימָה' },
+        { m: 'חָדָשׁ', f: 'חֲדָשָׁה' },
+        { m: 'שָׂמֵחַ', f: 'שְׂמֵחָה' },
+        { m: 'צָהֹב', f: 'צְהֻבָּה' },
+        { m: 'מַצְחִיק', f: 'מַצְחִיקָה' }
+    ];
     
-    // Cycle through combinations to ensure uniqueness
+    // Select components based on index to ensure 100 unique combinations
     const s = subjects[i % subjects.length];
     const v = verbs[Math.floor(i / 10) % 10]; // Change verb every 10
     const o = objects[i % objects.length];
     const a = adjectives[i % adjectives.length];
     
-    const passage = `${s} ${v} ${o}. הַ${o} הָיָה ${a}. ${s} הָיָה שָׂמֵחַ.`;
-    const question = `מָה ${v} ${s}?`;
-    const correctAnswer = `אֶת הַ${o}`; // "The [object]"
+    // Grammatical Construction
+    const subjectName = s.name;
+    const verbForm = s.gender === 'M' ? v.m : v.f;
+    const objectName = o.name;
     
-    // Create random options from other objects
-    const otherObjs = objects.filter(obj => obj !== o).sort(() => Math.random() - 0.5).slice(0, 3);
-    const options = [`אֶת הַ${o}`, ...otherObjs.map(obj => `אֶת הַ${obj}`)].sort(() => Math.random() - 0.5);
+    // "The [Object] was [Adjective]" -> Agreement with Object
+    const wasVerb = o.gender === 'M' ? 'הָיָה' : 'הָיְתָה';
+    const adjForm = o.gender === 'M' ? a.m : a.f;
+    
+    // "The [Subject] was happy" -> Agreement with Subject
+    const wasSubject = s.gender === 'M' ? 'הָיָה' : 'הָיְתָה';
+    const happyAdj = s.gender === 'M' ? 'שָׂמֵחַ' : 'שְׂמֵחָה';
+    
+    // Full Passage: "Dana ate a cake. The cake was tasty. Dana was happy."
+    const passage = `${subjectName} ${verbForm} ${objectName}. הַ${objectName} ${wasVerb} ${adjForm}. ${subjectName} ${wasSubject} ${happyAdj}.`;
+    
+    // Question: "What did Dana eat?"
+    const question = `מָה ${verbForm} ${subjectName}?`;
+    
+    // Answer: "The cake" (using 'Et Ha-' for direct object)
+    const correctAnswer = `אֶת הַ${objectName}`; 
+    
+    // Distractors
+    const otherObjs = objects.filter(obj => obj.name !== objectName).sort(() => Math.random() - 0.5).slice(0, 3);
+    const options = [`אֶת הַ${objectName}`, ...otherObjs.map(obj => `אֶת הַ${obj.name}`)].sort(() => Math.random() - 0.5);
 
     return {
         id: `he-read-${i + 1}`,
         passage: passage,
         question: question,
         options: options,
-        correctAnswer: `אֶת הַ${o}`
+        correctAnswer: correctAnswer
     };
 });
 
