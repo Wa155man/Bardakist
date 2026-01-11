@@ -3,37 +3,34 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { GameQuestion, VowelType, SentenceQuestion, RhymeQuestion, ReadingQuestion } from "../types";
 import { VOWEL_SPECIFIC_FALLBACKS, FALLBACK_TWISTERS, FALLBACK_SENTENCES, FALLBACK_SENTENCES_ENGLISH, FALLBACK_RHYMES, FALLBACK_HANGMAN_WORDS, FALLBACK_HANGMAN_WORDS_ENGLISH, FALLBACK_READING_QUESTIONS, FALLBACK_READING_QUESTIONS_ENGLISH } from "../constants";
 
-// Rule: API key must be obtained exclusively from process.env.API_KEY
+// Helper to check if we should even try the AI
+const isAIAvailable = () => {
+  return typeof navigator !== 'undefined' && navigator.onLine && !!process.env.API_KEY;
+};
+
 const initializeGenAI = () => {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
-  if (!process.env.API_KEY) return null;
+  if (!isAIAvailable()) return null;
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 /**
  * SILENT RESILIENCY WRAPPER
- * Catches 429 (Quota), 500s, and Timeouts.
- * Ensures the educational flow is never interrupted.
+ * Completely silences errors to prevent UI pop-ups.
  */
 async function safeAICall<T>(call: () => Promise<T>, fallback: T): Promise<T> {
     try {
         const timeoutPromise = new Promise<T>((_, reject) => 
-            setTimeout(() => reject(new Error("Timeout")), 5000)
+            setTimeout(() => reject(new Error("Timeout")), 3000)
         );
         return await Promise.race([call(), timeoutPromise]);
-    } catch (error: any) {
-        console.warn("AI Service unavailable. Falling back to local educational content.", error?.message);
+    } catch (error) {
         return fallback;
     }
 }
 
-// --- ANTI-THROTTLE IMAGE SYSTEM ---
 const imageBlobCache = new Map<string, string>();
 const pendingImageFetches = new Map<string, Promise<string>>();
 
-/**
- * Bypasses Pollinations rate limits by using randomized seeds and nologo tags.
- */
 export const prefetchImage = async (prompt: string): Promise<string> => {
     const cacheKey = prompt.trim().toLowerCase();
     if (imageBlobCache.has(cacheKey)) return imageBlobCache.get(cacheKey)!;
@@ -43,23 +40,17 @@ export const prefetchImage = async (prompt: string): Promise<string> => {
         try {
             const randomSeed = Math.floor(Math.random() * 10000000);
             const url = `https://image.pollinations.ai/prompt/simple%20cartoon%20sticker%20${encodeURIComponent(prompt)}?width=400&height=400&model=flux&nologo=true&seed=${randomSeed}&nofeed=true&safe=true`;
-            
             const response = await fetch(url);
-            if (!response.ok) throw new Error("Image fetch failed");
-            
+            if (!response.ok) throw new Error();
             const blob = await response.blob();
-            // Detect the "Rate Limit" placeholder which is usually a very small file
-            if (blob.size < 7000) throw new Error("Likely rate limit placeholder detected");
-            
+            if (blob.size < 7000) throw new Error();
             const blobUrl = URL.createObjectURL(blob);
             imageBlobCache.set(cacheKey, blobUrl);
             return blobUrl;
         } catch (e) {
-            console.warn("Image prefetch throttled or failed.");
             return "";
         }
     })();
-
     pendingImageFetches.set(cacheKey, fetchPromise);
     return fetchPromise;
 };
@@ -68,9 +59,7 @@ export const getCachedImageUrl = (prompt: string): string => {
     const cacheKey = prompt.trim().toLowerCase();
     const cached = imageBlobCache.get(cacheKey);
     if (cached) return cached;
-    
-    // Stable seed fallback to ensure consistency within a session
-    const stableSeed = Array.from(prompt).reduce((acc, char) => acc + char.charCodeAt(0), 0) + Math.floor(Math.random() * 1000);
+    const stableSeed = Array.from(prompt).reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return `https://image.pollinations.ai/prompt/sticker%20cartoon%20${encodeURIComponent(prompt)}?width=400&height=400&model=flux&nologo=true&seed=${stableSeed}&nofeed=true`;
 };
 
@@ -122,7 +111,7 @@ const ttsCache = new Map<string, AudioBuffer>();
 const pendingTTS = new Map<string, Promise<AudioBuffer | null>>();
 
 const getTTSAudioBuffer = async (text: string): Promise<AudioBuffer | null> => {
-  if (!text || !text.trim()) return null;
+  if (!text || !text.trim() || !isAIAvailable()) return null;
   if (ttsCache.has(text)) return ttsCache.get(text)!;
   if (pendingTTS.has(text)) return pendingTTS.get(text)!;
 
@@ -155,45 +144,76 @@ const getTTSAudioBuffer = async (text: string): Promise<AudioBuffer | null> => {
   })();
 
   pendingTTS.set(text, fetchPromise);
-  fetchPromise.finally(() => pendingTTS.delete(text));
   return fetchPromise;
 };
 
 export const prefetchTTS = (text: string) => {
-    getTTSAudioBuffer(text).catch(() => {});
+    if (isAIAvailable()) {
+        getTTSAudioBuffer(text).catch(() => {});
+    }
 };
 
-export const playTextToSpeech = async (text: string) => {
-  if (!text) return;
+/**
+ * PURE LOCAL SPEECH - NO GOOGLE API REQUIRED
+ * This function uses the browser's native speech engine immediately.
+ * It is synchronous and does not throw network errors.
+ */
+export const playTextToSpeech = (text: string) => {
+  if (!text || !text.trim()) return;
+  
+  const isHebrew = /[א-ת]/.test(text);
+  
+  // 1. Immediate Local Check
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      // Cancel any current speech to prevent queuing lag
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = isHebrew ? 'he-IL' : 'en-US';
+      
+      // Try to find a high-quality local voice
+      const voices = window.speechSynthesis.getVoices();
+      if (isHebrew) {
+          const hebVoice = voices.find(v => v.lang.includes('he') || v.name.includes('Hebrew'));
+          if (hebVoice) utterance.voice = hebVoice;
+      }
+
+      utterance.volume = 1.0;
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+
+      // Speak locally
+      window.speechSynthesis.speak(utterance);
+  }
+
+  // 2. Background Cache Check (Optional & Silent)
+  // If we happen to have a high-quality AI version cached, we could play that instead,
+  // but to avoid the "Failed to call Gemini API" error, we NEVER block on the API here.
   const ctx = getAudioContext();
   if (ctx && ttsCache.has(text)) {
-      if (ctx.state === 'suspended') try { await ctx.resume(); } catch(e){}
       const buffer = ttsCache.get(text)!;
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.connect(ctx.destination);
-      source.start();
-      return;
-  }
-  if ('speechSynthesis' in window) {
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      source.start(0);
+      // If we play the high-quality one, we can cancel the local one
       window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = /[א-ת]/.test(text) ? 'he-IL' : 'en-US';
-      window.speechSynthesis.speak(u);
+  } else if (isAIAvailable()) {
+      // Quietly try to fetch for the future, but do NOT wait for it
+      setTimeout(() => {
+          getTTSAudioBuffer(text).catch(() => {});
+      }, 0);
   }
-  prefetchTTS(text);
 };
 
 export const generateLevelContent = async (vowel: VowelType, excludeWords: string[] = []): Promise<GameQuestion[]> => {
   const specificQuestions = VOWEL_SPECIFIC_FALLBACKS[vowel] || VOWEL_SPECIFIC_FALLBACKS[VowelType.KAMATZ];
   let available = specificQuestions.filter(q => !excludeWords.includes(q.word));
-  
-  // Ensure we NEVER return an empty array
   if (available.length < 3) {
       available = specificQuestions.filter(q => !excludeWords.slice(-2).includes(q.word));
       if (available.length === 0) available = specificQuestions;
   }
-
   const shuffled = [...available].sort(() => 0.5 - Math.random());
   const selected = shuffled.slice(0, 5);
   selected.forEach(q => prefetchImage(q.correctTranslation));
@@ -234,7 +254,7 @@ export const evaluatePronunciation = async (audioBlob: Blob, targetWord: string)
     });
     const result = JSON.parse(response.text);
     return { grade: result.feedback || "מַאֲמָץ יָפֶה!", isExcellent: result.isExcellent ?? false };
-  }, { grade: "יוֹפִי שֶׁל מַאֲמָץ!", isExcellent: true });
+  }, { grade: "יוֹפי שֶׁל מַאֲמָץ!", isExcellent: true });
 };
 
 export const generateSentenceQuestions = async (language: 'hebrew' | 'english' = 'hebrew', excludeList: string[] = []): Promise<SentenceQuestion[]> => {
