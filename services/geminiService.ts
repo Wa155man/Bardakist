@@ -10,27 +10,29 @@ const initializeGenAI = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
-// --- SILENT RESILIENCY WRAPPER ---
 /**
- * Executes an AI call but catches Quota/Rate Limit errors and returns a default "Success" state.
- * This ensures children never see a technical error message.
+ * SILENT RESILIENCY WRAPPER
+ * Catches 429 (Quota), 500s, and Timeouts.
+ * Ensures the educational flow is never interrupted.
  */
 async function safeAICall<T>(call: () => Promise<T>, fallback: T): Promise<T> {
     try {
-        return await call();
+        const timeoutPromise = new Promise<T>((_, reject) => 
+            setTimeout(() => reject(new Error("Timeout")), 5000)
+        );
+        return await Promise.race([call(), timeoutPromise]);
     } catch (error: any) {
-        console.warn("AI Service unavailable or limited. Using silent fallback.", error?.message);
+        console.warn("AI Service unavailable. Falling back to local educational content.", error?.message);
         return fallback;
     }
 }
 
-// --- BINARY IMAGE CACHE SYSTEM ---
+// --- ANTI-THROTTLE IMAGE SYSTEM ---
 const imageBlobCache = new Map<string, string>();
 const pendingImageFetches = new Map<string, Promise<string>>();
 
 /**
- * Downloads an image as a Blob and stores a local Object URL.
- * Added a dynamic seed to bypass anonymous tier cache limits.
+ * Bypasses Pollinations rate limits by using randomized seeds and nologo tags.
  */
 export const prefetchImage = async (prompt: string): Promise<string> => {
     const cacheKey = prompt.trim().toLowerCase();
@@ -39,17 +41,21 @@ export const prefetchImage = async (prompt: string): Promise<string> => {
 
     const fetchPromise = (async () => {
         try {
-            // Random seed helps bypass some "anonymous tier" throttling
-            const randomSeed = Math.floor(Math.random() * 1000000);
-            const url = `https://image.pollinations.ai/prompt/simple%20cartoon%20sticker%20${encodeURIComponent(prompt)}?width=400&height=400&model=flux&nologo=true&nofeed=true&safe=true&seed=${randomSeed}`;
+            const randomSeed = Math.floor(Math.random() * 10000000);
+            const url = `https://image.pollinations.ai/prompt/simple%20cartoon%20sticker%20${encodeURIComponent(prompt)}?width=400&height=400&model=flux&nologo=true&seed=${randomSeed}&nofeed=true&safe=true`;
+            
             const response = await fetch(url);
-            if (!response.ok) throw new Error("Fetch failed");
+            if (!response.ok) throw new Error("Image fetch failed");
+            
             const blob = await response.blob();
+            // Detect the "Rate Limit" placeholder which is usually a very small file
+            if (blob.size < 7000) throw new Error("Likely rate limit placeholder detected");
+            
             const blobUrl = URL.createObjectURL(blob);
             imageBlobCache.set(cacheKey, blobUrl);
             return blobUrl;
         } catch (e) {
-            console.warn("Image prefetch failed:", e);
+            console.warn("Image prefetch throttled or failed.");
             return "";
         }
     })();
@@ -63,16 +69,15 @@ export const getCachedImageUrl = (prompt: string): string => {
     const cached = imageBlobCache.get(cacheKey);
     if (cached) return cached;
     
-    // If not cached, provide a URL with a stable seed based on the string
-    const stableSeed = Array.from(prompt).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return `https://image.pollinations.ai/prompt/simple%20cartoon%20sticker%20${encodeURIComponent(prompt)}?width=400&height=400&model=flux&nologo=true&nofeed=true&safe=true&seed=${stableSeed}`;
+    // Stable seed fallback to ensure consistency within a session
+    const stableSeed = Array.from(prompt).reduce((acc, char) => acc + char.charCodeAt(0), 0) + Math.floor(Math.random() * 1000);
+    return `https://image.pollinations.ai/prompt/sticker%20cartoon%20${encodeURIComponent(prompt)}?width=400&height=400&model=flux&nologo=true&seed=${stableSeed}&nofeed=true`;
 };
 
 export const getMiniGameImageUrl = (prompt: string): string => getCachedImageUrl(prompt);
 export const getHangmanImageUrl = (prompt: string): string => getCachedImageUrl(prompt);
 
 let audioContext: AudioContext | null = null;
-
 function getAudioContext() {
   if (!audioContext) {
     const AudioCtor = window.AudioContext || (window as any).webkitAudioContext;
@@ -86,9 +91,7 @@ function getAudioContext() {
 export const resumeAudioContext = async () => {
   const ctx = getAudioContext();
   if (ctx && ctx.state === 'suspended') {
-    try {
-      await ctx.resume();
-    } catch (e) {}
+    try { await ctx.resume(); } catch (e) {}
   }
 };
 
@@ -102,16 +105,10 @@ function decode(base64: string) {
   return bytes;
 }
 
-async function decodeAudioData(
-  data: Uint8Array,
-  ctx: AudioContext,
-  sampleRate: number,
-  numChannels: number,
-): Promise<AudioBuffer> {
+async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> {
   const dataInt16 = new Int16Array(data.buffer);
   const frameCount = dataInt16.length / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-
   for (let channel = 0; channel < numChannels; channel++) {
     const channelData = buffer.getChannelData(channel);
     for (let i = 0; i < frameCount; i++) {
@@ -140,24 +137,19 @@ const getTTSAudioBuffer = async (text: string): Promise<AudioBuffer | null> => {
         config: {
           responseModalities: ["AUDIO"], 
           speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Aoede' },
-            },
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } },
           },
         },
       });
 
       const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (!base64Audio) return null;
-
       const ctx = getAudioContext();
       if (!ctx) return null;
-
       const audioBuffer = await decodeAudioData(decode(base64Audio), ctx, 24000, 1);
       ttsCache.set(text, audioBuffer);
       return audioBuffer;
     } catch (error) {
-      console.warn("TTS Quota or Error reached. Falling back to local.", error?.message);
       return null;
     }
   })();
@@ -174,7 +166,6 @@ export const prefetchTTS = (text: string) => {
 export const playTextToSpeech = async (text: string) => {
   if (!text) return;
   const ctx = getAudioContext();
-  
   if (ctx && ttsCache.has(text)) {
       if (ctx.state === 'suspended') try { await ctx.resume(); } catch(e){}
       const buffer = ttsCache.get(text)!;
@@ -184,8 +175,6 @@ export const playTextToSpeech = async (text: string) => {
       source.start();
       return;
   }
-
-  // Fallback to browser TTS if Gemini TTS is unavailable or fetching
   if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
@@ -198,19 +187,19 @@ export const playTextToSpeech = async (text: string) => {
 export const generateLevelContent = async (vowel: VowelType, excludeWords: string[] = []): Promise<GameQuestion[]> => {
   const specificQuestions = VOWEL_SPECIFIC_FALLBACKS[vowel] || VOWEL_SPECIFIC_FALLBACKS[VowelType.KAMATZ];
   let available = specificQuestions.filter(q => !excludeWords.includes(q.word));
-  if (available.length < 5) {
-      available = specificQuestions.filter(q => !excludeWords.slice(-3).includes(q.word));
+  
+  // Ensure we NEVER return an empty array
+  if (available.length < 3) {
+      available = specificQuestions.filter(q => !excludeWords.slice(-2).includes(q.word));
       if (available.length === 0) available = specificQuestions;
   }
+
   const shuffled = [...available].sort(() => 0.5 - Math.random());
   const selected = shuffled.slice(0, 5);
   selected.forEach(q => prefetchImage(q.correctTranslation));
   return Promise.resolve(selected.map(q => ({ ...q, id: q.id + '-' + Date.now() })));
 };
 
-/**
- * Silent safety for pronunciation.
- */
 export const evaluatePronunciation = async (audioBlob: Blob, targetWord: string): Promise<{grade: string, isExcellent: boolean}> => {
   const ai = initializeGenAI();
   if (!ai) return { grade: "מַאֲמָץ נֶהְדָּר!", isExcellent: true };
@@ -218,24 +207,19 @@ export const evaluatePronunciation = async (audioBlob: Blob, targetWord: string)
   return safeAICall(async () => {
     const reader = new FileReader();
     const base64Promise = new Promise<string>((resolve) => {
-        reader.onloadend = () => {
-            const base64data = (reader.result as string).split(',')[1];
-            resolve(base64data);
-        };
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
     });
     reader.readAsDataURL(audioBlob);
     const base64Audio = await base64Promise;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [
-        {
+      contents: [{
           parts: [
             { inlineData: { data: base64Audio, mimeType: audioBlob.type } },
-            { text: `Evaluate child pronunciation for the Hebrew word: "${targetWord}". JSON: { isExcellent: boolean, feedback: string }` }
+            { text: `Evaluate pronunciation of: "${targetWord}". JSON: { isExcellent: boolean, feedback: string }` }
           ]
-        }
-      ],
+      }],
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -248,12 +232,8 @@ export const evaluatePronunciation = async (audioBlob: Blob, targetWord: string)
         }
       }
     });
-
     const result = JSON.parse(response.text);
-    return {
-        grade: result.feedback || "מַאֲמָץ יָפֶה!",
-        isExcellent: result.isExcellent ?? false
-    };
+    return { grade: result.feedback || "מַאֲמָץ יָפֶה!", isExcellent: result.isExcellent ?? false };
   }, { grade: "יוֹפִי שֶׁל מַאֲמָץ!", isExcellent: true });
 };
 
@@ -302,14 +282,12 @@ export const evaluateHandwriting = async (imageDataUrl: string, targetChar: stri
         const base64Data = imageDataUrl.split(',')[1];
         const response = await ai.models.generateContent({
             model: "gemini-3-flash-preview",
-            contents: [
-                {
-                    parts: [
-                        { text: `Grade child handwriting of letter: "${targetChar}". JSON: {isCorrect: boolean, feedback: string}` },
-                        { inlineData: { mimeType: "image/png", data: base64Data } }
-                    ]
-                }
-            ],
+            contents: [{
+                parts: [
+                    { text: `Evaluate handwriting of letter: "${targetChar}". JSON: {isCorrect: boolean, feedback: string}` },
+                    { inlineData: { mimeType: "image/png", data: base64Data } }
+                ]
+            }],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -322,7 +300,6 @@ export const evaluateHandwriting = async (imageDataUrl: string, targetChar: stri
                 }
             }
         });
-
         const result = JSON.parse(response.text);
         return { isCorrect: result.isCorrect ?? true, feedback: result.feedback ?? "מְצֻיָּן!" };
     }, { isCorrect: true, feedback: "מַאֲמָץ יָפֶה!" });
