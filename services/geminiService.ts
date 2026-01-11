@@ -1,59 +1,76 @@
-// ... existing imports ...
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { GameQuestion, VowelType, SentenceQuestion, RhymeQuestion, ReadingQuestion } from "../types";
 import { VOWEL_SPECIFIC_FALLBACKS, FALLBACK_TWISTERS, FALLBACK_SENTENCES, FALLBACK_SENTENCES_ENGLISH, FALLBACK_RHYMES, FALLBACK_HANGMAN_WORDS, FALLBACK_HANGMAN_WORDS_ENGLISH, FALLBACK_READING_QUESTIONS, FALLBACK_READING_QUESTIONS_ENGLISH } from "../constants";
 
-// ... existing initializeGenAI, handleGeminiError, blobToBase64, Audio Helpers ...
-
+// Rule: API key must be obtained exclusively from process.env.API_KEY
 const initializeGenAI = () => {
-  // Safe check for offline mode
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      return null;
-  }
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
+  if (!process.env.API_KEY) return null;
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+};
 
-  // 1. Check LocalStorage (User provided key)
-  try {
-    const userKey = localStorage.getItem('user_api_key');
-    if (userKey && userKey.trim().length > 0) {
-      return new GoogleGenAI({ apiKey: userKey.trim() });
+// --- SILENT RESILIENCY WRAPPER ---
+/**
+ * Executes an AI call but catches Quota/Rate Limit errors and returns a default "Success" state.
+ * This ensures children never see a technical error message.
+ */
+async function safeAICall<T>(call: () => Promise<T>, fallback: T): Promise<T> {
+    try {
+        return await call();
+    } catch (error: any) {
+        console.warn("AI Service unavailable or limited. Using silent fallback.", error?.message);
+        return fallback;
     }
-  } catch (e) {}
+}
 
-  // 2. Check Environment Variables
-  let apiKey = '';
-  try {
-      if (typeof process !== 'undefined' && process.env) {
-          // @ts-ignore
-          apiKey = process.env.API_KEY || '';
-      }
-      else if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_KEY) {
-          apiKey = (import.meta as any).env.VITE_API_KEY;
-      }
-  } catch (e) {}
-  
-  if (!apiKey) return null;
-  return new GoogleGenAI({ apiKey });
+// --- BINARY IMAGE CACHE SYSTEM ---
+const imageBlobCache = new Map<string, string>();
+const pendingImageFetches = new Map<string, Promise<string>>();
+
+/**
+ * Downloads an image as a Blob and stores a local Object URL.
+ * Added a dynamic seed to bypass anonymous tier cache limits.
+ */
+export const prefetchImage = async (prompt: string): Promise<string> => {
+    const cacheKey = prompt.trim().toLowerCase();
+    if (imageBlobCache.has(cacheKey)) return imageBlobCache.get(cacheKey)!;
+    if (pendingImageFetches.has(cacheKey)) return pendingImageFetches.get(cacheKey)!;
+
+    const fetchPromise = (async () => {
+        try {
+            // Random seed helps bypass some "anonymous tier" throttling
+            const randomSeed = Math.floor(Math.random() * 1000000);
+            const url = `https://image.pollinations.ai/prompt/simple%20cartoon%20sticker%20${encodeURIComponent(prompt)}?width=400&height=400&model=flux&nologo=true&nofeed=true&safe=true&seed=${randomSeed}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Fetch failed");
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            imageBlobCache.set(cacheKey, blobUrl);
+            return blobUrl;
+        } catch (e) {
+            console.warn("Image prefetch failed:", e);
+            return "";
+        }
+    })();
+
+    pendingImageFetches.set(cacheKey, fetchPromise);
+    return fetchPromise;
 };
 
-// ... existing handleGeminiError ...
-const handleGeminiError = (error: any, context: string) => {
-    console.warn(`Gemini Error in [${context}]:`, error);
+export const getCachedImageUrl = (prompt: string): string => {
+    const cacheKey = prompt.trim().toLowerCase();
+    const cached = imageBlobCache.get(cacheKey);
+    if (cached) return cached;
+    
+    // If not cached, provide a URL with a stable seed based on the string
+    const stableSeed = Array.from(prompt).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return `https://image.pollinations.ai/prompt/simple%20cartoon%20sticker%20${encodeURIComponent(prompt)}?width=400&height=400&model=flux&nologo=true&nofeed=true&safe=true&seed=${stableSeed}`;
 };
 
-// ... existing blobToBase64 ...
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64data = reader.result as string;
-      resolve(base64data.split(',')[1]); 
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
+export const getMiniGameImageUrl = (prompt: string): string => getCachedImageUrl(prompt);
+export const getHangmanImageUrl = (prompt: string): string => getCachedImageUrl(prompt);
 
-// --- Audio Helpers for TTS ---
 let audioContext: AudioContext | null = null;
 
 function getAudioContext() {
@@ -71,9 +88,7 @@ export const resumeAudioContext = async () => {
   if (ctx && ctx.state === 'suspended') {
     try {
       await ctx.resume();
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
   }
 };
 
@@ -106,7 +121,6 @@ async function decodeAudioData(
   return buffer;
 }
 
-// --- TTS Caching & Prefetching ---
 const ttsCache = new Map<string, AudioBuffer>();
 const pendingTTS = new Map<string, Promise<AudioBuffer | null>>();
 
@@ -133,7 +147,6 @@ const getTTSAudioBuffer = async (text: string): Promise<AudioBuffer | null> => {
         },
       });
 
-      // @ts-ignore
       const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (!base64Audio) return null;
 
@@ -144,6 +157,7 @@ const getTTSAudioBuffer = async (text: string): Promise<AudioBuffer | null> => {
       ttsCache.set(text, audioBuffer);
       return audioBuffer;
     } catch (error) {
+      console.warn("TTS Quota or Error reached. Falling back to local.", error?.message);
       return null;
     }
   })();
@@ -157,32 +171,10 @@ export const prefetchTTS = (text: string) => {
     getTTSAudioBuffer(text).catch(() => {});
 };
 
-const speakBrowser = (text: string) => {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    let voice = voices.find(v => (v.lang === 'he-IL' || v.lang === 'he') && v.name.includes('Google'));
-    if (!voice) voice = voices.find(v => v.lang === 'he-IL' || v.lang === 'he');
-
-    if (/[א-ת]/.test(text)) {
-        u.lang = 'he-IL';
-        if (voice) u.voice = voice;
-    } else {
-        u.lang = 'en-US';
-    }
-    
-    u.rate = 1.0; 
-    u.pitch = 1.0; 
-    
-    window.speechSynthesis.speak(u);
-};
-
 export const playTextToSpeech = async (text: string) => {
   if (!text) return;
   const ctx = getAudioContext();
   
-  // 1. Check Cache - If we have High Quality Audio, use it immediately
   if (ctx && ttsCache.has(text)) {
       if (ctx.state === 'suspended') try { await ctx.resume(); } catch(e){}
       const buffer = ttsCache.get(text)!;
@@ -193,113 +185,108 @@ export const playTextToSpeech = async (text: string) => {
       return;
   }
 
-  // 2. Instant Fallback to Browser TTS
-  // If the audio isn't cached, we do NOT wait for the API call. 
-  // We play the robot voice immediately to prevent lag.
-  speakBrowser(text);
-
-  // 3. Prefetch for next time (Background)
-  // We start the fetch in the background so next time it might be ready.
+  // Fallback to browser TTS if Gemini TTS is unavailable or fetching
+  if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = /[א-ת]/.test(text) ? 'he-IL' : 'en-US';
+      window.speechSynthesis.speak(u);
+  }
   prefetchTTS(text);
 };
 
-// ... existing Image Helpers ...
-export const getMiniGameImageUrl = (englishWord: string): string => {
-  const term = englishWord.trim();
-  return `https://image.pollinations.ai/prompt/cartoon%20${encodeURIComponent(term)}?width=300&height=300&model=flux&nologo=true&seed=${encodeURIComponent(term)}`;
-};
-
-export const getHangmanImageUrl = (hint: string): string => {
-    const term = hint.trim();
-    return `https://image.pollinations.ai/prompt/cartoon%20${encodeURIComponent(term)}?width=250&height=250&model=flux&nologo=true&seed=${encodeURIComponent(term)}`;
-};
-
-// ... Content Generators ...
-
-// 1. Level Content Generator (Recycles if exhausted)
 export const generateLevelContent = async (vowel: VowelType, excludeWords: string[] = []): Promise<GameQuestion[]> => {
   const specificQuestions = VOWEL_SPECIFIC_FALLBACKS[vowel] || VOWEL_SPECIFIC_FALLBACKS[VowelType.KAMATZ];
   let available = specificQuestions.filter(q => !excludeWords.includes(q.word));
-  
   if (available.length < 5) {
-      available = specificQuestions; 
+      available = specificQuestions.filter(q => !excludeWords.slice(-3).includes(q.word));
+      if (available.length === 0) available = specificQuestions;
   }
-  
   const shuffled = [...available].sort(() => 0.5 - Math.random());
   const selected = shuffled.slice(0, 5);
+  selected.forEach(q => prefetchImage(q.correctTranslation));
   return Promise.resolve(selected.map(q => ({ ...q, id: q.id + '-' + Date.now() })));
 };
 
-export const evaluatePronunciation = async (audioBlob: Blob, targetWord: string, childName: string = "Friend"): Promise<string> => {
-  return "מְצוּיָן!";
-};
+/**
+ * Silent safety for pronunciation.
+ */
+export const evaluatePronunciation = async (audioBlob: Blob, targetWord: string): Promise<{grade: string, isExcellent: boolean}> => {
+  const ai = initializeGenAI();
+  if (!ai) return { grade: "מַאֲמָץ נֶהְדָּר!", isExcellent: true };
 
-// 2. Sentence Generator (Recycles if exhausted, 100+ pool)
-export const generateSentenceQuestions = async (language: 'hebrew' | 'english' = 'hebrew', excludeList: string[] = []): Promise<SentenceQuestion[]> => {
-  const getFallback = () => {
-      const sourceList = language === 'english' ? FALLBACK_SENTENCES_ENGLISH : FALLBACK_SENTENCES;
-      let available = sourceList.filter(s => !excludeList.includes(s.fullSentence));
-      
-      if (available.length < 5) {
-          available = sourceList;
-      }
-      
-      const shuffled = [...available].sort(() => 0.5 - Math.random());
-      
-      return shuffled.slice(0, 5).map((s, i) => ({ id: `fallback-${Date.now()}-${i}`, ...s }));
-  };
-  return getFallback();
-};
+  return safeAICall(async () => {
+    const reader = new FileReader();
+    const base64Promise = new Promise<string>((resolve) => {
+        reader.onloadend = () => {
+            const base64data = (reader.result as string).split(',')[1];
+            resolve(base64data);
+        };
+    });
+    reader.readAsDataURL(audioBlob);
+    const base64Audio = await base64Promise;
 
-// 3. Hangman Words Generator (Recycles)
-export const generateHangmanWords = async (language: 'hebrew' | 'english' = 'hebrew', excludeList: string[] = []): Promise<{word: string, hint: string, hebrewHint: string, imagePrompt: string}[]> => {
-  const getFallback = () => {
-      const fallbackSource = language === 'english' ? FALLBACK_HANGMAN_WORDS_ENGLISH : FALLBACK_HANGMAN_WORDS;
-      let available = fallbackSource.filter(w => !excludeList.includes(w.word));
-      
-      if (available.length < 5) {
-          available = fallbackSource;
-      }
-      
-      const shuffled = [...available].sort(() => 0.5 - Math.random());
-      return shuffled.slice(0, 5);
-  };
-  return getFallback();
-};
-
-// 4. Rhymes Generator (Recycles)
-export const generateRhymeQuestions = async (excludeWords: string[] = []): Promise<RhymeQuestion[]> => {
-    const getFallback = () => {
-        let available = FALLBACK_RHYMES.filter(q => !excludeWords.includes(q.targetWord));
-        if (available.length < 5) {
-            available = FALLBACK_RHYMES;
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [
+        {
+          parts: [
+            { inlineData: { data: base64Audio, mimeType: audioBlob.type } },
+            { text: `Evaluate child pronunciation for the Hebrew word: "${targetWord}". JSON: { isExcellent: boolean, feedback: string }` }
+          ]
         }
-        const shuffled = [...available].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, 20).map((q, i) => ({ ...q, id: `rhyme-${Date.now()}-${i}` }));
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            isExcellent: { type: Type.BOOLEAN },
+            feedback: { type: Type.STRING }
+          },
+          required: ["isExcellent", "feedback"]
+        }
+      }
+    });
+
+    const result = JSON.parse(response.text);
+    return {
+        grade: result.feedback || "מַאֲמָץ יָפֶה!",
+        isExcellent: result.isExcellent ?? false
     };
-    return getFallback();
+  }, { grade: "יוֹפִי שֶׁל מַאֲמָץ!", isExcellent: true });
 };
 
-// 5. Reading Generator (Recycles, Shuffles, 100+ Questions)
-export const generateReadingQuestions = async (excludeIds: string[] = [], language: 'hebrew' | 'english' = 'hebrew'): Promise<ReadingQuestion[]> => {
-    // 1. Select source based on language
-    const sourceList = language === 'english' ? FALLBACK_READING_QUESTIONS_ENGLISH : FALLBACK_READING_QUESTIONS;
+export const generateSentenceQuestions = async (language: 'hebrew' | 'english' = 'hebrew', excludeList: string[] = []): Promise<SentenceQuestion[]> => {
+  const sourceList = language === 'english' ? FALLBACK_SENTENCES_ENGLISH : FALLBACK_SENTENCES;
+  let available = sourceList.filter(s => !excludeList.includes(s.fullSentence));
+  if (available.length < 5) available = sourceList;
+  const shuffled = [...available].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, 5).map((s, i) => ({ id: `fallback-${Date.now()}-${i}`, ...s }));
+};
 
-    // 2. Filter out questions that have already been played (excludeIds)
-    // IMPORTANT: Compare pure IDs if the IDs in history were modified with timestamps previously, though here we use stable IDs from constants
-    let available = sourceList.filter(q => !excludeIds.includes(q.id));
-    
-    // 3. If exhausted (or too few for a batch), recycle the full list
-    if (available.length < 5) {
-        available = sourceList;
-        // NOTE: In a real recycle scenario, we might want to clear the excludeIds in the parent component 
-        // to restart the cycle cleanly, but strictly here we just serve from full list randomized.
-    }
-    
-    // 4. Shuffle the pool completely
+export const generateHangmanWords = async (language: 'hebrew' | 'english' = 'hebrew', excludeList: string[] = []): Promise<{word: string, hint: string, hebrewHint: string, imagePrompt: string}[]> => {
+  const fallbackSource = language === 'english' ? FALLBACK_HANGMAN_WORDS_ENGLISH : FALLBACK_HANGMAN_WORDS;
+  let available = fallbackSource.filter(w => !excludeList.includes(w.word));
+  if (available.length < 5) available = fallbackSource;
+  const shuffled = [...available].sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, 5);
+  selected.forEach(w => prefetchImage(w.imagePrompt || w.hint));
+  return selected;
+};
+
+export const generateRhymeQuestions = async (excludeWords: string[] = []): Promise<RhymeQuestion[]> => {
+    let available = FALLBACK_RHYMES.filter(q => !excludeWords.includes(q.targetWord));
+    if (available.length < 5) available = FALLBACK_RHYMES;
     const shuffled = [...available].sort(() => 0.5 - Math.random());
-    
-    // 5. Return a batch (e.g., 5 at a time)
+    return shuffled.slice(0, 20).map((q, i) => ({ ...q, id: `rhyme-${Date.now()}-${i}` }));
+};
+
+export const generateReadingQuestions = async (excludeIds: string[] = [], language: 'hebrew' | 'english' = 'hebrew'): Promise<ReadingQuestion[]> => {
+    const sourceList = language === 'english' ? FALLBACK_READING_QUESTIONS_ENGLISH : FALLBACK_READING_QUESTIONS;
+    let available = sourceList.filter(q => !excludeIds.includes(q.id));
+    if (available.length < 5) available = sourceList;
+    const shuffled = [...available].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, 5);
 };
 
@@ -307,6 +294,36 @@ export const generateTongueTwister = async (): Promise<{hebrew: string, english:
     return FALLBACK_TWISTERS[Math.floor(Math.random() * FALLBACK_TWISTERS.length)];
 };
 
-export const evaluateHandwriting = async (imageDataUrl: string, promptText: string): Promise<{isCorrect: boolean, feedback: string}> => {
-    return { isCorrect: true, feedback: "Great effort!" };
+export const evaluateHandwriting = async (imageDataUrl: string, targetChar: string): Promise<{isCorrect: boolean, feedback: string}> => {
+    const ai = initializeGenAI();
+    if (!ai) return { isCorrect: true, feedback: "מַאֲמָץ נֶהְדָּר!" };
+
+    return safeAICall(async () => {
+        const base64Data = imageDataUrl.split(',')[1];
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: [
+                {
+                    parts: [
+                        { text: `Grade child handwriting of letter: "${targetChar}". JSON: {isCorrect: boolean, feedback: string}` },
+                        { inlineData: { mimeType: "image/png", data: base64Data } }
+                    ]
+                }
+            ],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        isCorrect: { type: Type.BOOLEAN },
+                        feedback: { type: Type.STRING }
+                    },
+                    required: ["isCorrect", "feedback"]
+                }
+            }
+        });
+
+        const result = JSON.parse(response.text);
+        return { isCorrect: result.isCorrect ?? true, feedback: result.feedback ?? "מְצֻיָּן!" };
+    }, { isCorrect: true, feedback: "מַאֲמָץ יָפֶה!" });
 };

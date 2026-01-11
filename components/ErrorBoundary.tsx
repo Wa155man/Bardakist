@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { Button } from './Button';
 
 interface Props {
@@ -9,10 +9,14 @@ interface State {
   hasError: boolean;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false
-  };
+// Fix: Use React.Component explicitly and add constructor to resolve "Property 'props' does not exist" type error
+export class ErrorBoundary extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false
+    };
+  }
 
   public static getDerivedStateFromError(_: Error): State {
     return { hasError: true };
@@ -45,6 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
+    // Line 48: Fixed by ensuring the class extends React.Component<Props, State> correctly
     return this.props.children;
   }
 }

@@ -21,7 +21,7 @@ import { FontControl } from './components/FontControl';
 import { RewardOverlay } from './components/RewardOverlay'; 
 import { PetSelection } from './components/PetSelection'; 
 import { ScreenState, LevelNode, UserProgress, GameQuestion, AppSettings, SentenceQuestion, RhymeQuestion, ReadingQuestion, GuriReward, PetProfile } from './types';
-import { generateLevelContent, generateSentenceQuestions, generateHangmanWords, generateRhymeQuestions, generateReadingQuestions, getMiniGameImageUrl, getHangmanImageUrl, resumeAudioContext } from './services/geminiService';
+import { generateLevelContent, generateSentenceQuestions, generateHangmanWords, generateRhymeQuestions, generateReadingQuestions, getMiniGameImageUrl, getHangmanImageUrl, resumeAudioContext, prefetchImage } from './services/geminiService';
 import { LEVEL_NODES, GURI_REWARDS, PETS } from './constants';
 
 export const App: React.FC = () => {
@@ -30,6 +30,9 @@ export const App: React.FC = () => {
   const [currentLevel, setCurrentLevel] = useState<LevelNode | null>(null);
   const [questions, setQuestions] = useState<GameQuestion[]>([]);
   const [nextQuestion, setNextQuestion] = useState<GameQuestion | undefined>(undefined);
+  
+  // Track words used in current session to prevent repetition
+  const [sessionUsedWords, setSessionUsedWords] = useState<Set<string>>(new Set());
 
   const [sentenceQuestions, setSentenceQuestions] = useState<SentenceQuestion[]>([]);
   const [sentenceHistory, setSentenceHistory] = useState<Set<string>>(() => {
@@ -65,7 +68,7 @@ export const App: React.FC = () => {
   // Capture Install Prompt
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault(); // Prevent default mini-infobar
+      e.preventDefault(); 
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -151,14 +154,6 @@ export const App: React.FC = () => {
       handleSaveSettings({ ...settings, selectedPetId: petId });
       localStorage.setItem('has_selected_pet', 'true');
       setScreen(ScreenState.LEVEL_SELECT);
-      const hasSeenMapTutorial = localStorage.getItem('tutorial_map_completed');
-      if (!hasSeenMapTutorial) {
-        setTimeout(() => {
-            const pet = PETS.find(p => p.id === petId) || PETS[0];
-            startTutorial([{ message: `שלום! אני ${pet.nameHebrew}. ברוכים הבאים להרפתקאות בעברית!` }, { message: "טיילו בשביל האבנים הצהובות כדי לפתוח שלבים ולהרוויח מטבעות." }, { message: "לחצו על השלב הראשון כדי להתחיל במסע!" }]);
-            localStorage.setItem('tutorial_map_completed', 'true');
-        }, 500);
-      }
   };
 
   const handleSaveSettings = (newSettings: AppSettings) => {
@@ -202,22 +197,18 @@ export const App: React.FC = () => {
     setIsLoading(true);
     setScreen(ScreenState.GAME_SESSION); 
     try {
-      // Use basic random selection for level content, not strictly history-bound to allow mastery repetition
-      const generatedQuestions = await generateLevelContent(level.vowel);
+      // PREVENT REPETITION: Pass used words from this session
+      const generatedQuestions = await generateLevelContent(level.vowel, Array.from(sessionUsedWords));
+      
       setQuestions(generatedQuestions);
       setNextQuestion(generatedQuestions.length > 1 ? generatedQuestions[1] : undefined);
       setCurrentQuestionIndex(0);
-      if (generatedQuestions.length > 0) {
-          const imgPromise = new Promise<void>((resolve) => {
-              const firstImg = new Image();
-              firstImg.onload = () => resolve();
-              firstImg.onerror = () => resolve();
-              firstImg.src = getMiniGameImageUrl(generatedQuestions[0].correctTranslation);
-          });
-          const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 1000));
-          await Promise.race([imgPromise, timeoutPromise]);
-          generatedQuestions.slice(1).forEach(q => { new Image().src = getMiniGameImageUrl(q.correctTranslation); });
-      }
+
+      // Track these words as used
+      const newUsed = new Set(sessionUsedWords);
+      generatedQuestions.forEach(q => newUsed.add(q.word));
+      setSessionUsedWords(newUsed);
+
       const hasSeenGameTutorial = localStorage.getItem('tutorial_game_completed');
       if (!hasSeenGameTutorial) {
         setTimeout(() => {
@@ -228,186 +219,26 @@ export const App: React.FC = () => {
     } catch (e) { console.error(e); } finally { setIsLoading(false); }
   };
 
-  const handleQuickPlay = async () => {
-    setScreen(ScreenState.SNOWMAN_GAME);
-    const hasSeen = localStorage.getItem('tutorial_sentences_completed');
-    if (!hasSeen) {
-        setTimeout(() => { startTutorial([{ message: "ברוכים הבאים למשחק המשפטים!" }, { message: "השלימו את המילה החסרה במשפט כדי לבנות את איש השלג." }]); localStorage.setItem('tutorial_sentences_completed', 'true'); }, 500);
-    }
-  };
-  
-  const handleSentenceGameStart = async (language: 'hebrew' | 'english') => {
-      setIsLoading(true);
-      setSnowmanLanguage(language);
-      try {
-          const historyArray: string[] = Array.from(sentenceHistory);
-          const data = await generateSentenceQuestions(language, historyArray);
-          const newHistory = new Set(sentenceHistory);
-          data.forEach(q => newHistory.add(q.fullSentence));
-          setSentenceHistory(newHistory);
-          setSentenceQuestions(data);
-      } catch (e) { console.error("Failed to start sentence game", e); } finally { setIsLoading(false); }
-  };
-
-  const handleLoadMoreSentences = async (language: 'hebrew' | 'english') => {
-    try {
-      const historyArray: string[] = Array.from(sentenceHistory);
-      const newQuestions = await generateSentenceQuestions(language, historyArray);
-      const newHistory = new Set(sentenceHistory);
-      newQuestions.forEach(q => newHistory.add(q.fullSentence));
-      setSentenceHistory(newHistory);
-      setSentenceQuestions(prev => [...prev, ...newQuestions]);
-    } catch (e) { console.error(e); }
-  };
-
-  const handleOpenMiniPractice = () => { setScreen(ScreenState.MINI_PRACTICE_SELECT); };
-
-  const handleStartHangman = async (language: 'hebrew' | 'english') => {
-      setIsLoading(true);
-      setHangmanLanguage(language);
-      try {
-          // Pass current history to avoid repeating even on start if not cleared
-          const historyArray: string[] = Array.from(hangmanHistory);
-          const newWords = await generateHangmanWords(language, historyArray);
-          const newHistory = new Set(hangmanHistory);
-          newWords.forEach(w => newHistory.add(w.word));
-          setHangmanHistory(newHistory);
-          
-          setHangmanWords(newWords);
-          
-          newWords.forEach(w => { 
-              const imgPrompt = w.imagePrompt || w.hint;
-              new Image().src = getHangmanImageUrl(imgPrompt); 
-          });
-      } catch (e) { 
-          console.error(e); 
-      } finally { 
-          setIsLoading(false); 
-      }
-  };
-
-  const handleLoadMoreHangman = async (language: 'hebrew' | 'english') => {
-      try {
-          const historyArray: string[] = Array.from(hangmanHistory);
-          const newWords = await generateHangmanWords(language, historyArray);
-          const newHistory = new Set(hangmanHistory);
-          newWords.forEach(w => newHistory.add(w.word));
-          setHangmanHistory(newHistory);
-          
-          newWords.forEach(w => { 
-              const imgPrompt = w.imagePrompt || w.hint;
-              new Image().src = getHangmanImageUrl(imgPrompt); 
-          });
-          setHangmanWords(prev => [...prev, ...newWords]);
-      } catch (e) { console.error(e); }
-  };
-
-  const handleLoadMoreRhymes = async () => {
-    if (isLoadingRhymes) return;
-    setIsLoadingRhymes(true);
-    try {
-        const historyArray: string[] = Array.from(rhymeHistory);
-        const newQuestions = await generateRhymeQuestions(historyArray);
-        const newHistory = new Set(rhymeHistory);
-        newQuestions.forEach(q => newHistory.add(q.targetWord));
-        setRhymeHistory(newHistory);
-        setRhymeQuestions(prev => [...prev, ...newQuestions]);
-    } catch (e) { console.error(e); } finally { setIsLoadingRhymes(false); }
-  };
-
-  const handleMiniPracticeSelect = async (optionId: string) => {
-    const tutorials: Record<string, TutorialStep[]> = {
-      matching: [{ message: "התאימו בין אות בכתב יד לאות בדפוס." }],
-      naming: [{ message: "בחרו את האות בדפוס שמתאימה לאות בכתב יד." }],
-      writing: [{ message: "כתבו את האותיות בין השורות הכחולות." }, { message: "החליפו בין תרגול דפוס וכתב יד!" }],
-      memory: [{ message: "מצאו את זוגות האותיות הזהות." }],
-      dictation: [{ message: "הזינו מילים, שננו אותן, ונסו לכתוב אותן נכון." }],
-      hangman: [{ message: "נחשו אותיות כדי לגלות את המילה. אל תתנו לרובוט להיבנות!" }],
-      rhymes: [{ message: "בחרו את המילה שמתחרזת." }],
-      reading: [{ message: "קראו את הסיפור וענו על השאלה." }]
-    };
-
-    if (optionId === 'sentences') { setReturnScreen(ScreenState.MINI_PRACTICE_SELECT); handleQuickPlay(); return; }
-    
-    const screenMap: Record<string, ScreenState> = {
-      matching: ScreenState.MATCHING_GAME,
-      naming: ScreenState.NAMING_GAME,
-      writing: ScreenState.WRITING_GAME,
-      memory: ScreenState.MEMORY_GAME,
-      dictation: ScreenState.DICTATION_GAME,
-      hangman: ScreenState.HANGMAN_GAME,
-      rhymes: ScreenState.RHYME_GAME,
-      reading: ScreenState.READING_GAME,
-    };
-
-    if (screenMap[optionId]) {
-      setScreen(screenMap[optionId]);
-      const tutorialKey = `tutorial_${optionId}_completed`;
-      if (!localStorage.getItem(tutorialKey) && tutorials[optionId]) {
-          setTimeout(() => { startTutorial(tutorials[optionId]); localStorage.setItem(tutorialKey, 'true'); }, 500);
-      }
-      
-      if (optionId === 'hangman' || optionId === 'rhymes' || optionId === 'reading') {
-        setIsLoading(true);
-        try {
-          if (optionId === 'hangman') {
-            await handleStartHangman('hebrew'); 
-          } else if (optionId === 'rhymes') {
-            const historyArray: string[] = Array.from(rhymeHistory);
-            const data = await generateRhymeQuestions(historyArray);
-            const newHistory = new Set(rhymeHistory);
-            data.forEach(q => newHistory.add(q.targetWord));
-            setRhymeHistory(newHistory);
-            setRhymeQuestions(data);
-          } else if (optionId === 'reading') {
-            const historyArray: string[] = Array.from(readingHistory);
-            const data = await generateReadingQuestions(historyArray, 'hebrew');
-            const newHistory = new Set(readingHistory);
-            data.forEach(q => newHistory.add(q.id));
-            setReadingHistory(newHistory);
-            setReadingQuestions(data);
-          }
-        } catch (e) { console.error(e); } finally { setIsLoading(false); }
-      }
-    }
-  };
-  
-  const handleReadingGameAction = async (action: 'more' | 'restart', language: 'hebrew' | 'english' = 'hebrew') => {
-    try { 
-      // Always pass history to ensure non-repetition
-      const historyArray: string[] = Array.from(readingHistory);
-      const moreQuestions = await generateReadingQuestions(historyArray, language);
-      
-      const newHistory = new Set(readingHistory);
-      moreQuestions.forEach(q => newHistory.add(q.id));
-      setReadingHistory(newHistory);
-
-      if (action === 'restart') {
-          setIsLoading(true);
-          setReadingQuestions(moreQuestions);
-          setIsLoading(false);
-      } else {
-          setReadingQuestions(prev => [...prev, ...moreQuestions]); 
-      }
-    } catch (e) { console.error(e); setIsLoading(false); }
-  };
-  
-  const handleOpenTongueTwisters = () => { setScreen(ScreenState.TONGUE_TWISTERS); };
-
   const handleLoadMorePractice = async () => {
       if (!currentLevel) return;
       setIsLoading(true);
       try {
-          const currentWords = questions.map(q => q.word);
-          const newQuestions = await generateLevelContent(currentLevel.vowel, currentWords);
+          // PREVENT REPETITION: Filter out words already used in this session
+          const newQuestions = await generateLevelContent(currentLevel.vowel, Array.from(sessionUsedWords));
+          
           if (newQuestions.length > 0) {
-                const imgPromise = new Promise<void>(resolve => { const img = new Image(); img.onload = () => resolve(); img.onerror = () => resolve(); img.src = getMiniGameImageUrl(newQuestions[0].correctTranslation); });
-                await Promise.race([imgPromise, new Promise<void>(resolve => setTimeout(resolve, 1000))]);
-                newQuestions.slice(1).forEach(q => { new Image().src = getMiniGameImageUrl(q.correctTranslation); });
+              const newUsed = new Set(sessionUsedWords);
+              newQuestions.forEach(q => newUsed.add(q.word));
+              setSessionUsedWords(newUsed);
+
+              setQuestions(prev => [...prev, ...newQuestions]);
+              setCurrentQuestionIndex(prev => prev + 1);
+              setNextQuestion(newQuestions.length > 0 ? newQuestions[0] : undefined);
+          } else {
+              // If completely exhausted, just loop back but clear session history for this level
+              setSessionUsedWords(new Set());
+              handleLoadMorePractice();
           }
-          setQuestions(prev => [...prev, ...newQuestions]);
-          setCurrentQuestionIndex(prev => prev + 1);
-          setNextQuestion(newQuestions.length > 0 ? newQuestions[0] : undefined);
       } catch (e) { console.error(e); } finally { setIsLoading(false); }
   };
 
@@ -424,18 +255,150 @@ export const App: React.FC = () => {
   const handleWrongAnswer = () => {};
   const handleLevelComplete = () => { setScreen(ScreenState.VICTORY); };
   const handleSnowmanComplete = () => { handleLevelComplete(); };
-  const handleBackToMap = () => { setScreen(ScreenState.LEVEL_SELECT); setQuestions([]); setSentenceQuestions([]); setHangmanWords([]); setRhymeQuestions([]); setReadingQuestions([]); setCurrentLevel(null); };
+  const handleBackToMap = () => { 
+    setScreen(ScreenState.LEVEL_SELECT); 
+    setQuestions([]); 
+    setCurrentLevel(null); 
+  };
   const handleBackToMiniPractice = () => { setScreen(ScreenState.MINI_PRACTICE_SELECT); };
+
+  // --- START OF MISSING HANDLERS FIX ---
+
+  // Handler for initializing Hangman game with a specific language
+  const handleStartHangman = async (lang: 'hebrew' | 'english') => {
+    setHangmanLanguage(lang);
+    setIsLoading(true);
+    try {
+      const words = await generateHangmanWords(lang, Array.from(hangmanHistory));
+      setHangmanWords(words);
+      setHangmanHistory(prev => {
+        const next = new Set(prev);
+        words.forEach(w => next.add(w.word));
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to start Hangman:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handler for loading more Hangman words
+  const handleLoadMoreHangman = async (lang: 'hebrew' | 'english') => {
+    try {
+      const more = await generateHangmanWords(lang, Array.from(hangmanHistory));
+      setHangmanWords(prev => [...prev, ...more]);
+      setHangmanHistory(prev => {
+        const next = new Set(prev);
+        more.forEach(w => next.add(w.word));
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to load more Hangman words:", e);
+    }
+  };
+
+  // Handler for loading more Rhyme questions
+  const handleLoadMoreRhymes = async () => {
+    setIsLoadingRhymes(true);
+    try {
+      const more = await generateRhymeQuestions(Array.from(rhymeHistory));
+      setRhymeQuestions(prev => [...prev, ...more]);
+      setRhymeHistory(prev => {
+        const next = new Set(prev);
+        more.forEach(q => next.add(q.targetWord));
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to load more Rhymes:", e);
+    } finally {
+      setIsLoadingRhymes(false);
+    }
+  };
+
+  // Handler for Reading game actions (restart or load more)
+  const handleReadingGameAction = async (action: 'more' | 'restart', lang: 'hebrew' | 'english') => {
+    if (action === 'restart') {
+      setIsLoading(true);
+      try {
+        const qs = await generateReadingQuestions([], lang);
+        setReadingQuestions(qs);
+        setReadingHistory(new Set(qs.map(q => q.id)));
+      } catch (e) {
+        console.error("Failed to restart Reading game:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      try {
+        const more = await generateReadingQuestions(Array.from(readingHistory), lang);
+        setReadingQuestions(prev => [...prev, ...more]);
+        setReadingHistory(prev => {
+          const next = new Set(prev);
+          more.forEach(q => next.add(q.id));
+          return next;
+        });
+      } catch (e) {
+        console.error("Failed to load more Reading questions:", e);
+      }
+    }
+  };
+
+  // Handler for initializing Snowman (Sentences) game
+  const handleSentenceGameStart = async (lang: 'hebrew' | 'english') => {
+    setSnowmanLanguage(lang);
+    setIsLoading(true);
+    try {
+      const qs = await generateSentenceQuestions(lang, Array.from(sentenceHistory));
+      setSentenceQuestions(qs);
+      setSentenceHistory(prev => {
+        const next = new Set(prev);
+        qs.forEach(q => next.add(q.fullSentence));
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to start Snowman game:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handler for loading more Snowman sentences
+  const handleLoadMoreSentences = async (lang: 'hebrew' | 'english') => {
+    try {
+      const more = await generateSentenceQuestions(lang, Array.from(sentenceHistory));
+      setSentenceQuestions(prev => [...prev, ...more]);
+      setSentenceHistory(prev => {
+        const next = new Set(prev);
+        more.forEach(q => next.add(q.fullSentence));
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to load more sentences:", e);
+    }
+  };
+
+  // Effect to handle initial data load for games that don't have an internal language menu
+  useEffect(() => {
+    if (screen === ScreenState.RHYME_GAME && rhymeQuestions.length === 0) {
+      handleLoadMoreRhymes();
+    }
+    if (screen === ScreenState.READING_GAME && readingQuestions.length === 0) {
+      handleReadingGameAction('restart', 'hebrew');
+    }
+  }, [screen]);
+
+  // --- END OF MISSING HANDLERS FIX ---
+
   const showTopBar = ([ScreenState.LEVEL_SELECT, ScreenState.GAME_SESSION] as ScreenState[]).includes(screen);
 
   return (
-    // UPDATED: Full screen on mobile, Framed on Desktop
     <div className="relative w-full h-[100dvh] md:w-[95vw] md:h-[95dvh] md:max-h-[100dvh] md:max-w-[1400px] bg-white md:rounded-[2rem] shadow-2xl overflow-hidden md:border-[8px] border-slate-800 md:ring-4 ring-slate-900/50 select-none flex flex-col mx-auto my-auto transition-all duration-300">
       {showTopBar && <TopBar progress={userProgress} onHome={handleBackToMap} onOpenSettings={() => setIsSettingsOpen(true)} />}
       
       {screen === ScreenState.PET_SELECTION && <PetSelection onSelect={handlePetSelection} />}
-      {screen === ScreenState.LEVEL_SELECT && <LevelMap onSelectLevel={handleSelectLevel} onQuickPlay={() => { setReturnScreen(ScreenState.LEVEL_SELECT); handleQuickPlay(); }} onOpenTongueTwisters={handleOpenTongueTwisters} onOpenMiniPractice={handleOpenMiniPractice} />}
-      {screen === ScreenState.MINI_PRACTICE_SELECT && <MiniPracticeGrid onSelectOption={handleMiniPracticeSelect} onBack={handleBackToMap} />}
+      {screen === ScreenState.LEVEL_SELECT && <LevelMap onSelectLevel={handleSelectLevel} onQuickPlay={() => { setReturnScreen(ScreenState.LEVEL_SELECT); setScreen(ScreenState.SNOWMAN_GAME); }} onOpenTongueTwisters={() => setScreen(ScreenState.TONGUE_TWISTERS)} onOpenMiniPractice={() => setScreen(ScreenState.MINI_PRACTICE_SELECT)} />}
+      {screen === ScreenState.MINI_PRACTICE_SELECT && <MiniPracticeGrid onSelectOption={(id) => setScreen(id as any)} onBack={handleBackToMap} />}
       
       {screen === ScreenState.MATCHING_GAME && <MatchingGame onBack={handleBackToMiniPractice} settings={settings} onEarnPoints={handleEarnPoints} />}
       {screen === ScreenState.NAMING_GAME && <NamingGame onBack={handleBackToMiniPractice} settings={settings} onEarnPoints={handleEarnPoints} />}
@@ -446,12 +409,12 @@ export const App: React.FC = () => {
       {screen === ScreenState.RHYME_GAME && !isLoading && <RhymeGame questions={rhymeQuestions} onBack={handleBackToMiniPractice} onLoadMore={handleLoadMoreRhymes} onEarnPoints={handleEarnPoints} />}
       {screen === ScreenState.READING_GAME && !isLoading && <ReadingGame questions={readingQuestions} onBack={handleBackToMiniPractice} onGameAction={handleReadingGameAction} onEarnPoints={handleEarnPoints} />}
       {screen === ScreenState.TONGUE_TWISTERS && <TongueTwisters onBack={handleBackToMap} />}
-      {screen === ScreenState.SNOWMAN_GAME && !isLoading && <SnowmanGame questions={sentenceQuestions} onComplete={handleSnowmanComplete} onBack={() => { if (returnScreen === ScreenState.LEVEL_SELECT) { handleBackToMap(); } else { handleBackToMiniPractice(); } }} onLoadMore={handleLoadMoreSentences} onStartGame={handleSentenceGameStart} settings={settings} onEarnPoints={handleEarnPoints} language={snowmanLanguage} />}
+      {screen === ScreenState.SNOWMAN_GAME && !isLoading && <SnowmanGame questions={sentenceQuestions} onComplete={handleSnowmanComplete} onBack={() => setScreen(returnScreen)} onLoadMore={handleLoadMoreSentences} onStartGame={handleSentenceGameStart} settings={settings} onEarnPoints={handleEarnPoints} language={snowmanLanguage} />}
 
       {isLoading && (
-        <div className="flex flex-col items-center justify-center h-full bg-green-50 md:rounded-[2.5rem]">
-          <div className="w-24 h-24 border-8 border-green-200 border-t-green-500 rounded-full animate-spin mb-4"></div>
-          <h2 className="text-3xl font-bold text-green-700 animate-pulse">...טוען</h2>
+        <div className="flex flex-col items-center justify-center h-full bg-indigo-50 md:rounded-[2.5rem] z-[100]">
+          <div className="w-24 h-24 border-8 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+          <h2 className="text-3xl font-black text-indigo-700 animate-pulse font-dynamic">...טּוֹעֵן (Loading)</h2>
         </div>
       )}
 
@@ -459,8 +422,8 @@ export const App: React.FC = () => {
         <div className="h-full w-full bg-indigo-50 pt-16 md:pt-20 relative overflow-hidden flex flex-col">
            <div className="container mx-auto px-4 relative z-10 flex-1 flex flex-col">
              <div className="text-center mb-1 md:mb-2 shrink-0">
-               <h1 className="text-xl md:text-2xl font-bold text-gray-700">{currentLevel.name}</h1>
-               <p className="text-gray-500 text-xs md:text-sm">{currentLevel.description}</p>
+               <h1 className="text-xl md:text-2xl font-black text-indigo-700 font-dynamic">{currentLevel.name}</h1>
+               <p className="text-indigo-500 text-xs md:text-sm font-bold font-dynamic">{currentLevel.description}</p>
              </div>
              <div className="flex-1 min-h-0">
                  <MiniGame question={questions[currentQuestionIndex]} nextQuestion={questions[currentQuestionIndex+1]} totalQuestions={questions.length} questionNumber={currentQuestionIndex + 1} onCorrect={handleCorrectAnswer} onWrong={handleWrongAnswer} isTutorialActive={tutorialActive} settings={settings} />
@@ -488,7 +451,7 @@ export const App: React.FC = () => {
       {isSettingsOpen && <SettingsModal settings={settings} userProgress={userProgress} onSave={handleSaveSettings} onClose={() => setIsSettingsOpen(false)} onResetProgress={handleResetProgress} onLoadProgress={handleLoadProgress} onResetScore={handleResetScore} pets={PETS} deferredPrompt={deferredPrompt} />}
       
       <FontControl currentFont={settings.fontStyle} onChange={(f) => handleSaveSettings({...settings, fontStyle: f})} />
-      <button onClick={() => setIsSettingsOpen(true)} className={`absolute z-[200] bg-white/90 p-3 rounded-full shadow-md border-2 border-gray-200 hover:rotate-90 transition-transform duration-300 ${screen === ScreenState.HANGMAN_GAME ? 'top-4 right-4 md:top-8 md:right-8' : 'bottom-4 right-4 md:bottom-8 md:right-8'}`} title="הגדרות">
+      <button onClick={() => setIsSettingsOpen(true)} className={`absolute z-[200] bg-white/90 p-3 rounded-full shadow-md border-2 border-gray-200 hover:rotate-90 transition-transform duration-300 bottom-4 right-4 md:bottom-8 md:right-8`} title="הגדרות">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
       </button>
     </div>

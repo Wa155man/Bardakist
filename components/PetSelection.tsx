@@ -9,14 +9,33 @@ interface PetSelectionProps {
 
 export const PetSelection: React.FC<PetSelectionProps> = ({ onSelect }) => {
   const [selected, setSelected] = useState<string>('guri');
+  const [errorStates, setErrorStates] = useState<Record<string, boolean>>({});
 
   const handleConfirm = () => {
     onSelect(selected);
   };
 
+  const handleImageError = (id: string) => {
+    setErrorStates(prev => ({ ...prev, [id]: true }));
+  };
+
+  // Improved stability prompts with nofeed and specific seeds
+  const getPetImageUrl = (pet: any) => {
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(pet.imagePrompt)}?width=400&height=400&nologo=true&nofeed=true&safe=true&seed=${pet.id}_stable_v2`;
+  };
+
+  const getFallbackEmoji = (id: string) => {
+    switch(id) {
+        case 'guri': return '🐶';
+        case 'albert': return '🦜';
+        case 'bungee': return '🦊';
+        case 'tedi': return '🐼';
+        default: return '🐾';
+    }
+  };
+
   return (
     <div className="h-full w-full bg-indigo-50 flex flex-col items-center p-2 md:p-6 relative overflow-hidden">
-      {/* Background Decor */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
          <div className="absolute top-10 left-10 w-32 h-32 bg-yellow-300 rounded-full blur-3xl opacity-30"></div>
          <div className="absolute bottom-10 right-10 w-40 h-40 bg-purple-300 rounded-full blur-3xl opacity-30"></div>
@@ -32,10 +51,11 @@ export const PetSelection: React.FC<PetSelectionProps> = ({ onSelect }) => {
             </p>
         </div>
 
-        {/* Grid Container - Flex-1 to take available space, min-h-0 to allow shrinking */}
         <div className="flex-1 w-full max-w-6xl grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 min-h-0 mb-4 px-1 content-center overflow-y-auto md:overflow-hidden">
           {PETS.map((pet) => {
             const isSelected = selected === pet.id;
+            const hasError = errorStates[pet.id];
+            
             return (
               <button
                 key={pet.id}
@@ -52,18 +72,23 @@ export const PetSelection: React.FC<PetSelectionProps> = ({ onSelect }) => {
                   </div>
                 )}
                 
-                <div className="w-full aspect-square rounded-xl overflow-hidden mb-2 bg-gray-50 border border-gray-100 relative shrink-0 max-h-[160px]">
-                   <img 
-                     src={`https://image.pollinations.ai/prompt/${encodeURIComponent(pet.imagePrompt)}?width=300&height=300&nologo=true&seed=${pet.id}_avatar`}
-                     alt={pet.name}
-                     className="w-full h-full object-cover"
-                   />
+                <div className="w-full aspect-square rounded-xl overflow-hidden mb-2 bg-gray-50 border border-gray-100 relative shrink-0 max-h-[160px] flex items-center justify-center">
+                   {hasError ? (
+                       <div className="text-7xl md:text-8xl animate-float">{getFallbackEmoji(pet.id)}</div>
+                   ) : (
+                       <img 
+                         src={getPetImageUrl(pet)}
+                         alt={pet.name}
+                         className="w-full h-full object-cover"
+                         onError={() => handleImageError(pet.id)}
+                       />
+                   )}
                 </div>
 
                 <div className="text-center w-full flex-1 flex flex-col justify-center">
                     <h3 className="text-lg md:text-xl font-black text-gray-800 leading-none mb-1 font-dynamic truncate w-full">{pet.nameHebrew}</h3>
                     <p className="text-indigo-500 font-bold text-xs mb-1">{pet.name}</p>
-                    <p className="text-gray-500 text-[10px] md:text-xs font-medium leading-tight line-clamp-2 md:line-clamp-3">
+                    <p className="text-gray-500 text-[10px] md:text-xs font-medium leading-tight line-clamp-2 md:line-clamp-3 px-1">
                     {pet.description}
                     </p>
                 </div>
